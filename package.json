@@ -1,50 +1,38 @@
 {
-  "name": "server",
+  "name": "myteacher-institute-backend",
   "version": "1.0.0",
-  "description": "Project created with better-ts-stack using mongoose",
-  "main": "dist/index.js",
+  "description": "MyTeacher Institute Backend API",
+  "main": "dist/src/server.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "pnpm dist/index.js",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "type:check": "tsc --noEmit"
+    "start": "node dist/src/server.js",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write 'src/**/*.ts'"
   },
-  "keywords": [
-    "backend",
-    "typescript",
-    "express"
-  ],
+  "keywords": [],
   "author": "",
-  "license": "MIT",
+  "license": "ISC",
+  "type": "module",
   "dependencies": {
-    "express": "^4.18.2",
-    "dotenv": "^16.3.1",
-    "cors": "^2.8.5",
-    "helmet": "^7.1.0",
-    "morgan": "^1.10.0",
-    "mongoose": "^8.0.0",
-    "mongodb": "^6.0.0",
-    "bcrypt": "^5.1.1",
-    "jsonwebtoken": "^9.0.2"
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mongoose": "^9.6.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.2",
-    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/morgan": "^1.9.9",
-    "@types/node": "^20.10.6",
-    "eslint": "^9.39.2",
+    "@eslint/js": "^10.0.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.6.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.1",
+    "@typescript-eslint/parser": "^8.59.1",
+    "eslint": "^10.2.1",
     "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.8.1",
-    "prettier-plugin-tailwindcss": "^0.7.2",
-    "tsx": "^4.7.0",
-    "typescript": "^5.3.3",
-    "typescript-eslint": "^8.54.0",
-    "@types/bcrypt": "^5.0.0",
-    "@types/jsonwebtoken": "^9.0.5"
+    "eslint-plugin-prettier": "^5.5.5",
+    "prettier": "^3.8.3",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
   }
 }
