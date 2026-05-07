@@ -1,9 +1,17 @@
-import { Router } from "express";
-import { handleSignupUser } from "../controllers/auth.controller.signup";
+import { Router } from 'express';
+import {
+  handleAuthenticateUser,
+  handleGetAccessToken,
+  handleVerifyOtp,
+  handleVerifyPassword,
+} from '../controllers/auth.controller';
+import ProtectMiddleWare from '../middleware/protect-route';
 
+const authRoute: Router = Router();
 
+authRoute.post('/initiate', handleAuthenticateUser);
+authRoute.post('/verify-password', handleVerifyPassword);
+authRoute.post('/verify-otp', handleVerifyOtp);
+authRoute.get('/new-access-code', ProtectMiddleWare, handleGetAccessToken);
 
-const authRoute: Router = Router()
-
-authRoute.post("/signup", handleSignupUser)
-export default authRoute
+export default authRoute;

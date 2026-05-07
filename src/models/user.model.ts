@@ -23,7 +23,6 @@ const userSchema = new mongoose.Schema<IUser>(
     },
     name: {
       type: String,
-      required: true,
     },
     phone: {
       type: String,
@@ -46,3 +45,6 @@ const User = mongoose.model('user', userSchema);
 
 export default User;
 export type { IUser };
+
+
+  
