@@ -93,3 +93,5 @@ const ProtectMiddleWare = (req: Request, res: Response<ProtectMiddleWareErrorT>,
         res.status(500).json({ message: 'INTERNAL_SERVER_ERRROR', type: "server-error" });
     }
 };
+
+export { ProtectMiddleWare };
