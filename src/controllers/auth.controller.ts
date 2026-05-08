@@ -2,13 +2,12 @@ import { Request, Response } from 'express';
 import User from '../models/user.model';
 import Otp from '../models/otp.model';
 import { Session } from '../models/session.model';
-import logger, { generateJWT, getClientIp, resend } from '../utils';
-import VerifyAccountEmail from '../templates/emails/verify-account-email';
-import fs from 'fs';
-import path from 'path';
+import { generateJWT, getClientIp } from '../utils';
+
 import {
   handleAuthenticateResT,
   HandleGetAccessTokenResponseT,
+  handleSendResetInstructionsResT,
   handleVerifyOtpResT,
   handleVerifyPasswordResT,
 } from '../types/auth.controller';
@@ -16,85 +15,10 @@ import bcrypt from 'bcryptjs';
 import { generateSession } from '../utils/create-session';
 import config from '../config/env';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
+import { sendResetPasswordEmail, sendVerificationEmail } from '../services/send-email';
 
 // 1. Resolve the path to your file
-const logoPath = path.join(process.cwd(), 'src', 'assets', 'logo.png');
-
-// 2. Read the file into a Buffer
-const logoBuffer = fs.readFileSync(logoPath);
-
-const sendVerificationEmail = async (
-  userId: string,
-  email: string,
-  otpUseCase: 'new-account' | 'onboarded-account'
-): Promise<'success' | 'error' | 'rate-limited'> => {
-  try {
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // Find existing unused OTP for this user
-    let existingOtp = await Otp.findOne({
-      accountToVerifyId: userId,
-      isUsed: false,
-    });
-
-    if (existingOtp) {
-      // Check if attempts exceeded 5
-      if (existingOtp.sendAttempts >= 5) {
-        return 'rate-limited';
-      }
-
-      // Update existing OTP with new code and increment attempts
-      existingOtp.otp = otpCode;
-      existingOtp.sendAttempts += 1;
-      // Reset expiry to 10 minutes from now
-      existingOtp.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-      await existingOtp.save();
-    } else {
-      // Create new OTP record
-      await Otp.create({
-        accountToVerifyId: userId,
-        otp: otpCode,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-        isUsed: false,
-        useCase: otpUseCase,
-        sendAttempts: 1,
-      });
-    }
-
-    logger.info(`OTP generated for user ${userId}: ${otpCode}`);
-
-    const verifyAccountProps = {
-      previewText: 'Verify your account with your 6-digit code',
-      logo_url: 'cid:logo_image_id',
-      code: otpCode,
-    };
-
-    const { data, error } = await resend.emails.send({
-      from: process.env.NO_REPLY_EMAIL ?? 'Acme <onboarding@resend.dev>',
-      to: email,
-      subject: 'Verify Your Account',
-      react: VerifyAccountEmail(verifyAccountProps),
-      attachments: [
-        {
-          filename: 'logo.png',
-          content: logoBuffer,
-          contentId: 'logo_image_id',
-        },
-      ],
-    });
-
-    if (error) {
-      logger.error(`Failed to send verification email to ${email}: ${error.message}`);
-      return 'error';
-    }
-
-    logger.info(`Email sent successfully. Resend response data: ${JSON.stringify(data)}`);
-    return 'success';
-  } catch (error) {
-    logger.error(`Error in sendVerificationEmail: ${(error as Error)?.message ?? error}`);
-    return 'error';
-  }
-};
 
 export const handleAuthenticateUser = async (
   req: Request<any, any, { email: string }>,
@@ -505,5 +429,139 @@ export const handleGetAccessToken = (
   } catch (error) {
     console.log('Error on @handleGetAccessToken. error --> ', (error as Error)?.message ?? error);
     res.status(500).json({ type: 'server-error', message: 'Internal server error occurred' });
+  }
+};
+
+export const handleSendResetInstructions = async (
+  req: Request<any, any, { email?: string }>,
+  res: Response<handleSendResetInstructionsResT>
+) => {
+  try {
+    const { email } = req.body || {};
+
+    // Validate email
+    if (!email) {
+      const errorResponse: handleSendResetInstructionsResT = {
+        status: 'failed',
+        message: 'Email is required',
+      };
+      return res.status(400).json(errorResponse);
+    }
+
+    const emailRegex =
+      /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    if (!emailRegex.test(email)) {
+      const errorResponse: handleSendResetInstructionsResT = {
+        status: 'failed',
+        message: 'Invalid email format',
+      };
+      return res.status(400).json(errorResponse);
+    }
+
+    // Find user
+    const findUser = await User.findOne({ email });
+
+    if (!findUser) {
+      const errorResponse: handleSendResetInstructionsResT = {
+        status: 'failed',
+        message: 'User account not found. Please contact support.',
+      };
+      return res.status(400).json(errorResponse);
+    }
+
+    const findOtp = await Otp.findOne({
+      userId: findUser._id,
+      useCase: 'reset-password',
+      isUsed: false,
+    });
+
+    if (findOtp) {
+      if (findOtp.sendAttempts > 4) {
+        const errorResponse: handleSendResetInstructionsResT = {
+          status: 'failed',
+          message:
+            'Too many reset instruction requests. Please wait 15 minutes to request another.',
+        };
+        return res.status(429).json(errorResponse);
+      }
+
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+      const resetId = new mongoose.Types.ObjectId();
+
+      // Update existing OTP with new code and reset ID
+      await Otp.updateOne(
+        { _id: findOtp._id },
+        {
+          $set: {
+            otp: otpCode,
+            accountToVerifyId: resetId,
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+            sendAttempts: findOtp.sendAttempts + 1,
+          },
+        }
+      );
+
+      // Send reset password email
+      const resetLink = `${process.env.BACKEND_BASE_URL || 'http://localhost:3000'}/api/auth/therest?token=${otpCode}&id=${encodeURIComponent(resetId.toString())}`;
+      const emailResult = await sendResetPasswordEmail(email, resetLink);
+
+      if (emailResult === 'error') {
+        const errorResponse: handleSendResetInstructionsResT = {
+          status: 'failed',
+          message: 'Failed to send reset instructions. Please try again.',
+        };
+        return res.status(500).json(errorResponse);
+      }
+    }
+
+    // Create new OTP for first-time reset request
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Create new OTP record
+    await Otp.create({
+      otp: otpCode,
+      accountToVerifyId: findUser._id,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      isUsed: false,
+      useCase: 'reset-password',
+      sendAttempts: 1,
+    });
+
+    // Delete old OTP records for this user and use case
+    await Otp.deleteMany({
+      userId: findUser._id,
+      useCase: 'reset-password',
+      isUsed: false,
+    });
+
+    // Send reset password email
+    const resetLink = `${process.env.FRONTEND_BASE_URL || 'http://localhost:3000'}/auth/change-password/otp?token=${otpCode}`;
+    const emailResult = await sendResetPasswordEmail(email, resetLink);
+
+    if (emailResult === 'error') {
+      const errorResponse: handleSendResetInstructionsResT = {
+        status: 'failed',
+        message: 'Failed to send reset instructions. Please try again.',
+      };
+      return res.status(500).json(errorResponse);
+    }
+
+    // Return success response after email is sent
+    const successResponse: handleSendResetInstructionsResT = {
+      status: 'success',
+      message: 'Reset instructions sent to your email. Please check your inbox.',
+    };
+    return res.status(200).json(successResponse);
+  } catch (error) {
+    console.log(
+      'Error on @handleSendResetInstructions. error --> ',
+      (error as Error)?.message ?? error
+    );
+    const errorResponse: handleSendResetInstructionsResT = {
+      status: 'failed',
+      message: 'Internal server error',
+    };
+    return res.status(500).json(errorResponse);
   }
 };
