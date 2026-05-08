@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   handleAuthenticateUser,
   handleGetAccessToken,
+  handleResetPasswordWithCode,
   handleSendResetInstructions,
   handleVerifyOtp,
   handleVerifyPassword,
@@ -15,5 +16,6 @@ authRoute.post('/verify-password', handleVerifyPassword);
 authRoute.post('/verify-otp', handleVerifyOtp);
 authRoute.get('/new-access-code', ProtectMiddleWare, handleGetAccessToken);
 authRoute.post('/request-reset-account-instructions', handleSendResetInstructions);
+authRoute.post('/reset-password-with-code', handleResetPasswordWithCode);
 
 export default authRoute;

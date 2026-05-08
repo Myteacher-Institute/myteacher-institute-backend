@@ -7,10 +7,11 @@ import { generateJWT, getClientIp } from '../utils';
 import {
   handleAuthenticateResT,
   HandleGetAccessTokenResponseT,
+  handleResetPasswordWithCodeResT,
   handleSendResetInstructionsResT,
   handleVerifyOtpResT,
   handleVerifyPasswordResT,
-} from '../types/auth.controller';
+} from '../types/controller/auth.types';
 import bcrypt from 'bcryptjs';
 import { generateSession } from '../utils/create-session';
 import config from '../config/env';
@@ -563,5 +564,137 @@ export const handleSendResetInstructions = async (
       message: 'Internal server error',
     };
     return res.status(500).json(errorResponse);
+  }
+};
+
+export const handleResetPasswordWithCode = async (
+  req: Request<any, any, { code?: string; password?: string; confirmPassword?: string; logoutAllDevices?: boolean }>,
+  res: Response<handleResetPasswordWithCodeResT>
+) => {
+  try {
+    const { code, password, confirmPassword, logoutAllDevices } = req.body || {};
+
+    // Validate required fields
+    if (!code) {
+      const errorResponse: handleResetPasswordWithCodeResT = {
+        status: 'failed',
+        message: 'Reset code is required',
+      };
+      return res.status(400).json(errorResponse);
+    }
+
+    if (!password) {
+      const errorResponse: handleResetPasswordWithCodeResT = {
+        status: 'failed',
+        message: 'Password is required',
+      };
+      return res.status(400).json(errorResponse);
+    }
+
+    if (!confirmPassword) {
+      const errorResponse: handleResetPasswordWithCodeResT = {
+        status: 'failed',
+        message: 'Password confirmation is required',
+      };
+      return res.status(400).json(errorResponse);
+    }
+
+    // Validate password strength
+    if (password.length < 6) {
+      const errorResponse: handleResetPasswordWithCodeResT = {
+        status: 'failed',
+        message: 'Password must be at least 6 characters long',
+      };
+      return res.status(400).json(errorResponse);
+    }
+
+    // Check if passwords match
+    if (password !== confirmPassword) {
+      const errorResponse: handleResetPasswordWithCodeResT = {
+        status: 'failed',
+        message: 'Passwords do not match',
+      };
+      return res.status(400).json(errorResponse);
+    }
+
+    // Find OTP record
+    const otpRecord = await Otp.findOne({
+      otp: code,
+      isUsed: false,
+      useCase: 'reset-password',
+    });
+
+    if (!otpRecord) {
+      const errorResponse: handleResetPasswordWithCodeResT = {
+        status: 'failed',
+        message: 'Invalid or expired reset code',
+      };
+      return res.status(400).json(errorResponse);
+    }
+
+    // Check if OTP has expired
+    if (otpRecord.expiresAt < new Date()) {
+      const errorResponse: handleResetPasswordWithCodeResT = {
+        status: 'failed',
+        message: 'Reset code has expired',
+      };
+      return res.status(400).json(errorResponse);
+    }
+
+    // Find the user associated with this OTP
+    const user = await User.findById(otpRecord.accountToVerifyId);
+    if (!user) {
+      const errorResponse: handleResetPasswordWithCodeResT = {
+        status: 'failed',
+        message: 'User not found',
+      };
+      return res.status(404).json(errorResponse);
+    }
+
+    // Check if user is onboarded
+    if (!user.hasOnboarded) {
+      const errorResponse: handleResetPasswordWithCodeResT = {
+        status: 'failed',
+        message: 'This feature is not available for your account. Please complete account setup first.',
+      };
+      return res.status(403).json(errorResponse);
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update user password
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { password: hashedPassword } }
+    );
+
+    // Delete OTP record
+    await Otp.deleteOne({ _id: otpRecord._id });
+
+    // Logout all devices if requested
+    if (logoutAllDevices) {
+      await Session.deleteMany({ userId: user._id });
+    }
+
+    const successResponse: handleResetPasswordWithCodeResT = {
+      status: 'success',
+      message: logoutAllDevices 
+        ? 'Password has been reset successfully and all devices have been logged out'
+        : 'Password has been reset successfully',
+    };
+    return res.status(200).json(successResponse);
+
+    
+  } catch (error) {
+    console.log(
+      'Error on @handleResetPasswordWithCode. error --> ',
+      (error as Error)?.message ?? error
+    );
+    const errorResponse: handleResetPasswordWithCodeResT = {
+      status: 'failed',
+      message: 'Internal server error',
+    };
+    res.status(500).json(errorResponse);
   }
 };

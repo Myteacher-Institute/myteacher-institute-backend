@@ -592,6 +592,177 @@ export const configureScalarDocs = (app: Express): void => {
                 }
               }
             }
+          },
+          '/api/auth/reset-password-with-code': {
+            post: {
+              tags: ['Authentication'],
+              summary: 'Reset password with code',
+              description: 'Resets user password using reset code and optional device logout',
+              requestBody: {
+                required: true,
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      required: ['code', 'password', 'confirmPassword'],
+                      properties: {
+                        code: {
+                          type: 'string',
+                          description: '6-digit reset code sent to email',
+                          example: '123456'
+                        },
+                        password: {
+                          type: 'string',
+                          minLength: 6,
+                          description: 'New password (min 6 characters)',
+                          example: 'newPassword123'
+                        },
+                        confirmPassword: {
+                          type: 'string',
+                          description: 'Password confirmation',
+                          example: 'newPassword123'
+                        },
+                        logoutAllDevices: {
+                          type: 'boolean',
+                          description: 'Whether to logout all devices after password reset',
+                          example: false
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              responses: {
+                '200': {
+                  description: 'Password reset successful',
+                  content: {
+                    'application/json': {
+                      schema: {
+                        type: 'object',
+                        properties: {
+                          status: { type: 'string', enum: ['success'] },
+                          message: { type: 'string' }
+                        },
+                        examples: {
+                          'with logout': {
+                            summary: 'Success with device logout',
+                            value: {
+                              status: 'success',
+                              message: 'Password has been reset successfully and all devices have been logged out'
+                            }
+                          },
+                          'without logout': {
+                            summary: 'Success without device logout',
+                            value: {
+                              status: 'success',
+                              message: 'Password has been reset successfully'
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                '400': {
+                  description: 'Invalid input or validation error',
+                  content: {
+                    'application/json': {
+                      schema: {
+                        type: 'object',
+                        properties: {
+                          status: { type: 'string', enum: ['failed'] },
+                          message: { type: 'string' }
+                        },
+                        examples: {
+                          'missing code': {
+                            summary: 'Reset code required',
+                            value: {
+                              status: 'failed',
+                              message: 'Reset code is required'
+                            }
+                          },
+                          'password too short': {
+                            summary: 'Password too short',
+                            value: {
+                              status: 'failed',
+                              message: 'Password must be at least 6 characters long'
+                            }
+                          },
+                          'passwords mismatch': {
+                            summary: 'Passwords do not match',
+                            value: {
+                              status: 'failed',
+                              message: 'Passwords do not match'
+                            }
+                          },
+                          'invalid code': {
+                            summary: 'Invalid reset code',
+                            value: {
+                              status: 'failed',
+                              message: 'Invalid or expired reset code'
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                '403': {
+                  description: 'Account not onboarded',
+                  content: {
+                    'application/json': {
+                      schema: {
+                        type: 'object',
+                        properties: {
+                          status: { type: 'string', enum: ['failed'] },
+                          message: { type: 'string' }
+                        },
+                        example: {
+                          status: 'failed',
+                          message: 'This feature is not available for your account. Please complete account setup first.'
+                        }
+                      }
+                    }
+                  }
+                },
+                '404': {
+                  description: 'User not found',
+                  content: {
+                    'application/json': {
+                      schema: {
+                        type: 'object',
+                        properties: {
+                          status: { type: 'string', enum: ['failed'] },
+                          message: { type: 'string' }
+                        },
+                        example: {
+                          status: 'failed',
+                          message: 'User not found'
+                        }
+                      }
+                    }
+                  }
+                },
+                '500': {
+                  description: 'Internal server error',
+                  content: {
+                    'application/json': {
+                      schema: {
+                        type: 'object',
+                        properties: {
+                          status: { type: 'string', enum: ['failed'] },
+                          message: { type: 'string' }
+                        },
+                        example: {
+                          status: 'failed',
+                          message: 'Internal server error'
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         components: {
