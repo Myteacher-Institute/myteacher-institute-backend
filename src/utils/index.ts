@@ -1,11 +1,10 @@
-// Utility functions for the application
-// Add helper functions, validators, formatters, etc. here
 
-import { Resend } from 'resend';
+
 import config from '../config/env';
 import jwt from 'jsonwebtoken';
-import IPLocate from 'node-iplocate';
 import { Request } from 'express';
+import IPLocate from 'node-iplocate';
+import { Resend } from 'resend';
 
 export const logger = {
   info: (message: string): void => console.log(`ℹ️  ${message}`),
