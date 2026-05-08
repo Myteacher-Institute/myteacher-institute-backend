@@ -68,3 +68,7 @@ export type HandleGetAccessTokenResponseT =
   | HandleGetAccessTokenErrorT;
 
 export type handleAuthenticateResT = handleAuthenticateErrorT | handleAuthenticateSuccessResT;
+
+export type handleSendResetInstructionsResT =
+  | { status: 'failed'; message: string }
+  | { status: 'success'; message: string };

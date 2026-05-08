@@ -6,7 +6,7 @@ interface IOtp extends Document {
   expiresAt: Date;
   isUsed: boolean;
   sendAttempts: number;
-  useCase: 'new-account' | 'onboarded-account';
+  useCase: 'new-account' | 'onboarded-account' | 'reset-password';
 }
 
 const otpSchema = new Schema<IOtp>(
@@ -36,7 +36,7 @@ const otpSchema = new Schema<IOtp>(
     },
     useCase: {
       type: String,
-      enum: ['new-account', 'onboarded-account'],
+      enum: ['new-account', 'onboarded-account', "reset-password"],
     },
   },
   {
