@@ -1,7 +1,8 @@
 import express, { type Express, type Request, type Response } from 'express';
 import cors from 'cors';
 import apiRouter from './routes/index';
-import { setupSwagger } from './config/swagger';
+import { configureScalarDocs } from './config/scalar';
+
 
 export const createApp = (): Express => {
     const app = express();
@@ -17,7 +18,8 @@ export const createApp = (): Express => {
     // API routes
     app.use('/api', apiRouter);
 
-    setupSwagger(app)
+    // Scalar API documentation
+    configureScalarDocs(app);
 
     return app;
 };
