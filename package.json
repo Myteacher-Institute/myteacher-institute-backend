@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js", 
+    "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write 'src/**/*.ts'"
@@ -14,8 +14,8 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
   "dependencies": {
+    "@scalar/express-api-reference": "^0.9.14",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "bcryptjs": "^3.0.3",
