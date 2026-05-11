@@ -2,9 +2,10 @@
 // Add API routes here
 
 import { type Router, Router as ExpressRouter } from 'express';
+import authRoute from './auth.routes';
 
 const router: Router = ExpressRouter();
 
-// TODO: Add routes here
+router.use('/auth', authRoute);
 
 export default router;
