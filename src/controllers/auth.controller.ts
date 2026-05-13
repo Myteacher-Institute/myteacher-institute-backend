@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import User from '../models/user.model';
 import Otp from '../models/otp.model';
 import { Session } from '../models/session.model';
-import { generateJWT, getClientIp } from '../utils';
+import { generateJWT, getClientIp, getHandleVerifyOtpSuccessMessage, validateVerifyPasswordInput } from '../utils';
 
 import {
   handleAuthenticateResT,
@@ -19,7 +19,8 @@ import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import { sendResetPasswordEmail, sendVerificationEmail } from '../services/send-email';
 
-// 1. Resolve the path to your file
+
+
 
 export const handleAuthenticateUser = async (
   req: Request<any, any, { email: string }>,
@@ -135,52 +136,6 @@ export const handleAuthenticateUser = async (
   }
 };
 
-const validateVerifyPasswordInput = (
-  email: any,
-  password: any
-): true | handleVerifyPasswordResT => {
-  if (typeof email !== 'string') {
-    return {
-      errorOnInput: 'email',
-      status: 'failed',
-      message: 'Email must be a string',
-    };
-  }
-
-  if (!email) {
-    return {
-      errorOnInput: 'email',
-      status: 'failed',
-      message: 'Email is required',
-    };
-  }
-
-  if (typeof password !== 'string') {
-    return {
-      errorOnInput: 'password',
-      status: 'failed',
-      message: 'Password must be a string',
-    };
-  }
-
-  if (!password) {
-    return {
-      errorOnInput: 'password',
-      status: 'failed',
-      message: 'Password is required',
-    };
-  }
-
-  if (password.length < 6) {
-    return {
-      errorOnInput: 'password',
-      status: 'failed',
-      message: 'Password must be at least 6 characters long',
-    };
-  }
-
-  return true;
-};
 
 export const handleVerifyPassword = async (
   req: Request<any, any, { password?: string; email?: string }>,
@@ -338,14 +293,7 @@ export const handleVerifyOtp = async (
     const ip = getClientIp(req);
     const userAgent = req.get('User-Agent') || '';
 
-    const getSuccessMessage = (useCase: string): string => {
-      if (useCase === 'new-account') {
-        return 'Account verified successfully! Welcome aboard.';
-      } else if (useCase === 'onboarded-account') {
-        return 'Device verified successfully! You can now access your account.';
-      }
-      return 'Verification successful!';
-    };
+
 
     if (findOtp.useCase === 'new-account' || findOtp.useCase === 'onboarded-account') {
       const sessionRes = await generateSession({
@@ -369,7 +317,7 @@ export const handleVerifyOtp = async (
 
       return res.status(200).json({
         status: 'success',
-        message: getSuccessMessage(findOtp.useCase),
+        message: getHandleVerifyOtpSuccessMessage(findOtp.useCase),
         authUser: findUser,
         accessToken: access_code,
       });
