@@ -7,13 +7,11 @@ import { configureScalarDocs } from './config/scalar';
 export const createApp = (): Express => {
     const app = express();
 
-    app.use(cors());
-    app.use(express.json());
-    app.use(express.urlencoded({ extended: true }));
+    app.use(cors())
 
     app.get('/', (_req: Request, res: Response) => {
         res.status(200).json({ status: 'ok', message: 'Service is running' });
-    }); 
+    });
 
     // API routes
     app.use('/api', apiRouter);

@@ -27,7 +27,7 @@ export const handleAuthenticateUser = async (
   res: Response<handleAuthenticateResT>
 ) => {
   try {
-    const { email } = req.body;
+    const { email } = req.body || {};
 
     if (!email) {
       const errorResponse: handleAuthenticateResT = {
@@ -38,8 +38,7 @@ export const handleAuthenticateUser = async (
       return res.status(400).json(errorResponse);
     }
 
-    const emailRegex =
-      /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) {
       const errorResponse: handleAuthenticateResT = {
         errorOnInput: true,
@@ -397,8 +396,7 @@ export const handleSendResetInstructions = async (
       return res.status(400).json(errorResponse);
     }
 
-    const emailRegex =
-      /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) {
       const errorResponse: handleSendResetInstructionsResT = {
         status: 'failed',
@@ -627,13 +625,13 @@ export const handleResetPasswordWithCode = async (
 
     const successResponse: handleResetPasswordWithCodeResT = {
       status: 'success',
-      message: logoutAllDevices 
+      message: logoutAllDevices
         ? 'Password has been reset successfully and all devices have been logged out'
         : 'Password has been reset successfully',
     };
     return res.status(200).json(successResponse);
 
-    
+
   } catch (error) {
     console.log(
       'Error on @handleResetPasswordWithCode. error --> ',

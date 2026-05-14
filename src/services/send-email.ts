@@ -1,5 +1,4 @@
 import path from 'path';
-
 import fs from 'fs';
 import Otp from '../models/otp.model';
 import logger, { resend } from '../utils';
@@ -8,7 +7,7 @@ import ResetPasswordEmail from '../templates/emails/reset-password-instruction';
 
 const logoPath = path.join(process.cwd(), 'src', 'assets', 'logo.png');
 
-// 2. Read the file into a Buffer
+
 const logoBuffer = fs.readFileSync(logoPath);
 
 export const sendVerificationEmail = async (
@@ -19,26 +18,21 @@ export const sendVerificationEmail = async (
   try {
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Find existing unused OTP for this user
     let existingOtp = await Otp.findOne({
       accountToVerifyId: userId,
       isUsed: false,
     });
 
     if (existingOtp) {
-      // Check if attempts exceeded 5
       if (existingOtp.sendAttempts >= 5) {
         return 'rate-limited';
       }
 
-      // Update existing OTP with new code and increment attempts
       existingOtp.otp = otpCode;
       existingOtp.sendAttempts += 1;
-      // Reset expiry to 10 minutes from now
       existingOtp.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
       await existingOtp.save();
     } else {
-      // Create new OTP record
       await Otp.create({
         accountToVerifyId: userId,
         otp: otpCode,
