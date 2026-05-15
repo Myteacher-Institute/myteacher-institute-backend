@@ -1,5 +1,6 @@
 import { apiReference } from '@scalar/express-api-reference';
 import { type Express } from 'express';
+import logger from '../utils';
 
 export const configureScalarDocs = (app: Express): void => {
   app.use(
@@ -798,4 +799,6 @@ export const configureScalarDocs = (app: Express): void => {
       },
     })
   );
+  const apiDocsUrl = `${process.env.BACKEND_BASE_URL}/api/docs`
+  logger.info(`Documentation ---> ${apiDocsUrl}`)
 };
