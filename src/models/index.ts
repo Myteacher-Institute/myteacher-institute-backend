@@ -1,8 +1,3 @@
-// MongoDB schemas and models
-// Define your data models here using Mongoose
-
-import mongoose from 'mongoose';
-
-// TODO: Add Mongoose schemas here
-
-export default mongoose;
+export { default as User } from './user.model';
+export { default as Otp } from './otp.model';
+export * from './session.model';
