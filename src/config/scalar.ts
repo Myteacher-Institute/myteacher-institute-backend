@@ -12,6 +12,7 @@ export const configureScalarDocs = (app: Express): void => {
           title: 'MyTeacher Institute API',
           version: '1.0.0',
           description: 'API documentation for MyTeacher Institute Backend - Authentication System',
+          
         },
         servers: [
           {
@@ -796,7 +797,9 @@ export const configureScalarDocs = (app: Express): void => {
         title: 'MyTeacher Institute API Documentation',
         description:
           'Complete API documentation for MyTeacher Institute Backend Authentication System',
+        ogImage: '/assets/logo.png',
       },
+      favicon: '/assets/logo.png',
     })
   );
   const apiDocsUrl = `${process.env.BACKEND_BASE_URL}/api/docs`
