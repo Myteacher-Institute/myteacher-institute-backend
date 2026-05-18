@@ -12,7 +12,7 @@ export const createApp = (): Express => {
     app.use('/assets', express.static(path.join(process.cwd(), 'src', 'assets')));
 
     app.get('/', (_req: Request, res: Response) => {
-        res.status(200).json({ status: 'ok', message: 'Service is running' });
+        res.status(200).json({ status: 'ok', message: 'Service is running. Please check /api/docs for API documentation' });
     });
 
     // API routes

@@ -16,7 +16,7 @@ import {
   getAccessToken,
   sendResetInstructions,
   resetPasswordWithCode,
-} from '../services/auth.service';
+} from '../services';
 
 export const handleAuthenticateUser = async (
   req: Request<any, any, { email: string }>,

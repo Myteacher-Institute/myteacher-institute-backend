@@ -3,6 +3,12 @@ import { type Express } from 'express';
 import logger from '../utils';
 
 export const configureScalarDocs = (app: Express): void => {
+
+
+  const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL ?? "http://localhost:3000"
+  const NODE_ENV = process.env.NODE_ENV ?? "production"
+  const serverDescription = NODE_ENV.includes("prod") ? "Production Server" : "Development Server"
+
   app.use(
     '/api/docs',
     apiReference({
@@ -12,12 +18,12 @@ export const configureScalarDocs = (app: Express): void => {
           title: 'MyTeacher Institute API',
           version: '1.0.0',
           description: 'API documentation for MyTeacher Institute Backend - Authentication System',
-          
+
         },
         servers: [
           {
-            url: 'http://localhost:3000',
-            description: 'Development server',
+            url: BACKEND_BASE_URL,
+            description: serverDescription
           },
         ],
         paths: {
