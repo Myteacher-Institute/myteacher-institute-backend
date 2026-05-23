@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   handleAuthenticateUser,
   handleGetAccessToken,
+  handleGoogleCallback,
   handleResetPasswordWithCode,
   handleSendResetInstructions,
   handleVerifyOtp,
@@ -17,5 +18,6 @@ authRoute.post('/verify-otp', handleVerifyOtp);
 authRoute.get('/new-access-code', ProtectMiddleWare, handleGetAccessToken);
 authRoute.post('/request-reset-account-instructions', handleSendResetInstructions);
 authRoute.post('/reset-password-with-code', handleResetPasswordWithCode);
+authRoute.get('/google/callback', handleGoogleCallback);
 
 export default authRoute;
