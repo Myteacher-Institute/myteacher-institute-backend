@@ -1,6 +1,6 @@
 import { apiReference } from '@scalar/express-api-reference';
 import { type Express } from 'express';
-import { loadOpenApiSpec } from '../docs/loader';
+import { loadOpenApiSpec } from './docs-loader';
 import logger from '../utils';
 
 export const configureScalarDocs = (app: Express): void => {
