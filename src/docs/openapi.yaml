@@ -1,0 +1,33 @@
+openapi: "3.0.0"
+
+info:
+  title: MyTeacher Institute API
+  version: "1.0.0"
+  description: >
+    API documentation for the MyTeacher Institute Backend.
+    Covers authentication, user management, instructors, courses, and more.
+
+# Servers are injected at runtime by the loader — see src/config/scalar.ts
+servers: []
+
+tags:
+  - name: Authentication
+    description: >
+      All endpoints related to user authentication — sign-in, OTP verification,
+      token refresh, password reset, and OAuth flows.
+  # Future tags — uncomment as you add the corresponding path files:
+  # - name: Users
+  #   description: User profile and account management
+  # - name: Instructors
+  #   description: Instructor-specific operations
+  # - name: Courses
+  #   description: Course creation, management, and enrollment
+
+# Paths are merged at runtime from src/docs/paths/*.yaml
+paths: {}
+
+components:
+  # Schemas are merged at runtime from src/docs/components/schemas.yaml
+  schemas: {}
+  # Security schemes are merged at runtime from src/docs/components/security-schemes.yaml
+  securitySchemes: {}
