@@ -1,7 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import mongoose from 'mongoose';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 
 import { User, Otp, Session } from '../models';
 import config from '../config/env';
@@ -17,13 +16,17 @@ import {
 } from '../types/controller/auth.types';
 
 export const authenticateUser = async (
-  req: Request<any, any, { email: string }>
+  req: Request<any, any, { email: string, role: "user" | "instructor" }>
 ): Promise<{ status: number; body: handleAuthenticateResT }> => {
   try {
-    const { email } = req.body || {};
+    const { email, role } = req.body || {};
 
     if (!email) {
       return { status: 400, body: { errorOnInput: true, status: 'failed', message: 'Email is required' } };
+    }
+
+    if (!role || !['user', 'instructor'].includes(role)) {
+      return { status: 400, body: { errorOnInput: true, status: 'failed', message: 'Valid role is required (user or instructor)' } };
     }
 
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -57,7 +60,7 @@ export const authenticateUser = async (
       };
     }
 
-    const newUser = await User.create({ email });
+    const newUser = await User.create({ email, role });
     const emailStatus = await sendVerificationEmail(newUser._id.toString(), newUser.email, 'new-account');
 
     if (emailStatus === 'rate-limited') {
@@ -77,6 +80,7 @@ export const authenticateUser = async (
     return { status: 500, body: { errorOnInput: false, status: 'failed', message: 'Internal server error' } };
   }
 };
+
 
 export const verifyPassword = async (
   req: Request<any, any, { password?: string; email?: string }>

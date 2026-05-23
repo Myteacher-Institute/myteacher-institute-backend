@@ -16,10 +16,11 @@ import {
   getAccessToken,
   sendResetInstructions,
   resetPasswordWithCode,
+  googleCallback,
 } from '../services';
 
 export const handleAuthenticateUser = async (
-  req: Request<any, any, { email: string }>,
+  req: Request<any, any, { email: string, role: "user" | "instructor" }>,
   res: Response<handleAuthenticateResT>
 ) => {
   const { status, body } = await authenticateUser(req);
@@ -74,4 +75,8 @@ export const handleResetPasswordWithCode = async (
 ) => {
   const { status, body } = await resetPasswordWithCode(req);
   return res.status(status).json(body);
+};
+
+export const handleGoogleCallback = async (req: Request<any, any, any, any>, res: Response) => {
+  await googleCallback(req, res);
 };
