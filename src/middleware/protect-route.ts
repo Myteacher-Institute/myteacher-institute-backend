@@ -1,16 +1,11 @@
-import { Request, Response, NextFunction } from "express";
+import jwt from 'jsonwebtoken';
 import config from "../config/env";
-import jwt from 'jsonwebtoken'
-
-
+import { Request, Response, NextFunction } from "express";
 
 type ProtectMiddleWareErrorT = {
     type: "no-header" | "no-auth" | "server-error" | "invalid-auth",
     message: string
 }
-
-
-
 
 const ProtectMiddleWare = (req: Request, res: Response<ProtectMiddleWareErrorT>, next: NextFunction) => {
     try {

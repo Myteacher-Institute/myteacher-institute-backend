@@ -1,6 +1,6 @@
-import express, { type Express, type Request, type Response } from 'express';
 import cors from 'cors';
 import apiRouter from './routes/index';
+import express, { type Express, type Request, type Response } from 'express';
 
 export const createApp = (): Express => {
     const app = express();
