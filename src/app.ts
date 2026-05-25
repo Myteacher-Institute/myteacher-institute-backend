@@ -1,11 +1,10 @@
-import express, { type Express, type Request, type Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import apiRouter from './routes/index';
 import { configureScalarDocs } from './config/scalar';
+import express, { type Express, type Request, type Response } from 'express';
 
-
-export const createApp = (): Express => {
+const createApp = (): Express => {
     const app = express();
 
     app.use(cors());
