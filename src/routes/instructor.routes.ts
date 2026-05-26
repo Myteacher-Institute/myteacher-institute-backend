@@ -1,5 +1,25 @@
 import { Router } from "express";
-import { handleInstructorLogin, handleApplyAsInstructor, handleVerifyInstructor, handleRejectInstructor, handleGetAllInstructors, handleSendResetPasswordCode, handleResetPassword, handleResendResetPassword, handleGetInstructorById, handleDeleteInstructor, handleUpdateInstructor } from "../controllers/instructor.controller";
+
+import { 
+        handleInstructorLogin, 
+        handleApplyAsInstructor, 
+        handleVerifyInstructor 
+} from "../controllers/instructor.controller";
+
+import { 
+        handleSendResetPasswordCode, 
+        handleResetPassword, 
+        handleResendResetPassword 
+} from "../controllers/instructor-password.controller";
+
+import {
+    handleRejectInstructor,
+    handleGetAllInstructors,
+    handleGetInstructorById,
+    handleDeleteInstructor,
+    handleUpdateInstructor
+} from "../controllers/instructor-setup.controller";
+
 import { ProtectMiddleWare } from "../middleware/protect-route";
 import { isAdmin } from "../middleware/is-admin";
 

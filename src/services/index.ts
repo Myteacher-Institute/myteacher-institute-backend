@@ -3,6 +3,8 @@
 
 import { IUser } from "../models/user.model";
 
+import { instructorLoginValidation, applyInstructorValidation, verifyInstructor, sendResetPasswordCode, resetPassword, resendResetPassword, rejectInstructor, getAllInstructors, getInstructorById, deleteInstructor, updateInstructor } from "./instructor.services";
+
 type signupReqBody = {
     password?: string;
     email?: string;
@@ -87,6 +89,20 @@ export const validateSignupPayload = (payload: signupReqBody): signupErrorReqBod
     }
 
     return null;
+};
+
+export {
+    instructorLoginValidation,
+    applyInstructorValidation,
+    verifyInstructor,
+    sendResetPasswordCode,
+    resetPassword,
+    resendResetPassword,
+    rejectInstructor,
+    getAllInstructors,
+    getInstructorById,
+    deleteInstructor,
+    updateInstructor
 };
 
 export type { signupReqBody, signupErrorReqBody, signupSuccessReqBody, signupResponse };

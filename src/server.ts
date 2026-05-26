@@ -2,6 +2,7 @@ import createApp from './app';
 import { connectDB } from './config/database';
 import config from './config/env';
 import authRoute from './routes/auth.routes';
+import youtubeUploadRoutes from "./routes/youtube-upload.routes";
 
 const startServer = async (): Promise<void> => {
     try {
@@ -15,6 +16,7 @@ const startServer = async (): Promise<void> => {
         const app = createApp();
 
         app.use("/api/auth", authRoute);
+        app.use("/youtube", youtubeUploadRoutes);
 
 
         // Start Express server
