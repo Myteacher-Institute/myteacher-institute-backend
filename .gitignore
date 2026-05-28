@@ -39,4 +39,4 @@ coverage/
 *.tsbuildinfo
 
 #google console ids
-# client_secret_google_youtube.json
+# client_secret_google_youtube.com.json

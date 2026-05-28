@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import { IInstructor } from "../types/instructor.type";
+import { IInstructor } from "../types";
 
 const instructorSchema = new Schema<IInstructor>({
     name: { 

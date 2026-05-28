@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { Course } from "../models/course.model";
 import { Instructor } from "../models/instructor.model";
-import { AddCourseReqBody, AddCourseResT, FetchCoursesByUserResT, FetchAllCoursesResT } from "../types/course.type";
-import { addCourseValidation } from "../services/course.services";
+import { AddCourseReqBody, AddCourseResT, FetchCoursesByUserResT, FetchAllCoursesResT } from "../types";
+import { addCourseValidation } from "../services";
 
 const handleAddCourse = async (req: Request<{}, {}, AddCourseReqBody>, res: Response<AddCourseResT>) => {
     try {

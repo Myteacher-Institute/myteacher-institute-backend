@@ -10,7 +10,12 @@ export const config = {
     },
     JWT_REFRESH_TOKEN_SECRET: process.env.JWT_REFRESH_TOKEN_SECRET ?? "",
     JWT_ACCESS_TOKEN_SECRET: process.env.JWT_ACCESS_TOKEN_SECRET ?? "",
-    REFRESH_TOKEN_COOKIE_NAME: process.env.REFRESH_TOKEN_COOKIE_NAME ?? ""
+    REFRESH_TOKEN_COOKIE_NAME: process.env.REFRESH_TOKEN_COOKIE_NAME ?? "",
+    flutterwave: {
+        clientId: process.env.FLUTTERWAVE_CLIENT_ID ?? "",
+        clientSecret: process.env.FLUTTERWAVE_CLIENT_SECRET ?? "",
+        encryptionKey: process.env.FLUTTERWAVE_ENCRYPTION_KEY ?? ""
+    }
 };
 
 export default config;

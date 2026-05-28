@@ -7,14 +7,9 @@ import {
     InstructorLoginResT, 
     ApplyInstructorReqBody, 
     ApplyInstructorResT, 
-    GetAllInstructorsResT, 
-    RejectInstructorResT, 
     VerifyInstructorResT, 
-    GetInstructorByIdResT, 
-    DeleteInstructorResT, 
-    UpdateInstructorResT 
 } from "../types";
-import { instructorLoginValidation, applyInstructorValidation, verifyInstructor, rejectInstructor, getAllInstructors, getInstructorById, deleteInstructor, updateInstructor } from "../services";
+import { instructorLoginValidation, applyInstructorValidation, verifyInstructor } from "../services";
 
 const handleInstructorLogin = async (req: Request<InstructorLoginReqBody>, res: Response<InstructorLoginResT>) => {
     try {

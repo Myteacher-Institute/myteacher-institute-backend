@@ -5,6 +5,10 @@ import { IUser } from "../models/user.model";
 
 import { instructorLoginValidation, applyInstructorValidation, verifyInstructor, sendResetPasswordCode, resetPassword, resendResetPassword, rejectInstructor, getAllInstructors, getInstructorById, deleteInstructor, updateInstructor } from "./instructor.services";
 
+import { createPaymentLink, verifyTransaction, generateTransactionReference } from './flutterwave.services';
+
+import { addCourseValidation } from './course.services';
+
 type signupReqBody = {
     password?: string;
     email?: string;
@@ -102,7 +106,11 @@ export {
     getAllInstructors,
     getInstructorById,
     deleteInstructor,
-    updateInstructor
+    updateInstructor,
+    createPaymentLink,
+    verifyTransaction,
+    generateTransactionReference,
+    addCourseValidation
 };
 
 export type { signupReqBody, signupErrorReqBody, signupSuccessReqBody, signupResponse };
