@@ -44,7 +44,19 @@ export const verifyOtp = async (
     const ip = getClientIp(req);
     const userAgent = req.get('User-Agent') || '';
 
-    if (findOtp.useCase === 'new-account' || findOtp.useCase === 'onboarded-account') {
+    if (findOtp.useCase === 'new-account') {
+      return {
+        status: 200,
+        body: {
+          status: 'success',
+          message: 'OTP verified. Continue onboarding.',
+          nextStep: 'onboarding',
+          userId: findUser._id.toString(),
+        },
+      };
+    }
+
+    if (findOtp.useCase === 'onboarded-account') {
       const sessionRes = await generateSession({ ip, userAgent, userId: findUser._id.toString() });
 
       if (!sessionRes.isSuccessful) {

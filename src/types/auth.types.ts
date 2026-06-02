@@ -38,14 +38,14 @@ type handleVerifyOtpErrorT = {
   message: string;
 };
 
-type handleVerifySuccesT = {
+type handleVerifySuccessT = {
   status: 'success';
   message: string;
   authUser: IUser;
   accessToken: string;
 };
 
-export type handleVerifyOtpResT = handleVerifyOtpErrorT | handleVerifySuccesT;
+export type handleVerifyOtpResT = handleVerifyOtpErrorT | handleVerifySuccessT;
 
 export type handleVerifyPasswordResT =
   | handleVerifyPasswordErrorT
