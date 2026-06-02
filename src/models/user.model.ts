@@ -6,6 +6,7 @@ interface IUser extends mongoose.Document {
     name: string;
     phone?: string;
     isEmailVerified: boolean;
+    coursesBought: mongoose.Schema.Types.ObjectId[];
 }
 
 const userSchema = new mongoose.Schema<IUser>({
@@ -30,6 +31,10 @@ const userSchema = new mongoose.Schema<IUser>({
     isEmailVerified: {
         type: Boolean,
         default: false
+    },
+    coursesBought: {
+        type: [mongoose.Schema.Types.ObjectId],
+        ref: 'course'
     }
 }, {
     timestamps: true

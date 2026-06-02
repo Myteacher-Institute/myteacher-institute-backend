@@ -1,75 +1,23 @@
 import { Request, Response } from "express";
 import { Course } from "../models/course.model";
 import { Instructor } from "../models/instructor.model";
-import { AddCourseReqBody, AddCourseResT, FetchCoursesByUserResT, FetchAllCoursesResT } from "../types/course.type";
+import { AddCourseReqBody, AddCourseResT, FetchCoursesByUserResT, FetchAllCoursesResT } from "../types";
+import { addCourseValidation } from "../services";
 
 const handleAddCourse = async (req: Request<{}, {}, AddCourseReqBody>, res: Response<AddCourseResT>) => {
     try {
-        const { courseName, description, courseVideos, courseRequirements, price, duration, certificate } = req.body;
-
-        // Validate required fields
-        if (!courseName) {
-            return res.status(400).json({
-                status: "failed",
-                message: "Course name is required"
-            });
-        }
-
-        if (!description) {
-            return res.status(400).json({
-                status: "failed",
-                message: "Description is required"
-            });
-        }
-
-        if (!price) {
-            return res.status(400).json({
-                status: "failed",
-                message: "Price is required"
-            });
-        }
-
-        if (!duration) {
-            return res.status(400).json({
-                status: "failed",
-                message: "Duration is required"
-            });
-        }
-
-        if (!certificate) {
-            return res.status(400).json({
-                status: "failed",
-                message: "Certificate is required"
-            });
-        }
-
-        // Validate courseVideos structure
-        if (courseVideos && !Array.isArray(courseVideos)) {
-            return res.status(400).json({
-                status: "failed",
-                message: "courseVideos must be an array"
-            });
-        }
-
-        if (courseVideos && courseVideos.length > 0) {
-            for (const video of courseVideos) {
-                if (!video.videoUrl) {
-                    return res.status(400).json({
-                        status: "failed",
-                        message: "Each video must have a videoUrl"
-                    });
-                }
-            }
-        }
-
-        // Get instructor details from request (should be set by middleware)
         const instructorId = req.userId;
-        if (!instructorId) {
-            return res.status(401).json({
+
+        // Validate request body and instructor ID
+        const validation = addCourseValidation(req.body, instructorId);
+        if (!validation.isValid) {
+            return res.status(instructorId ? 400 : 401).json({
                 status: "failed",
-                message: "Unauthorized: Instructor ID not found"
+                message: validation.message
             });
         }
+
+        const { courseName, description, courseVideos, courseRequirements, price, duration, certificate } = req.body;
 
         // Get instructor details from the database
         const instructor = await Instructor.findById(instructorId);

@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import { IInstructor } from "../types/instructor.type";
+import { IInstructor } from "../types";
 
 const instructorSchema = new Schema<IInstructor>({
     name: { 
@@ -31,6 +31,11 @@ const instructorSchema = new Schema<IInstructor>({
     isVerified: { type: Boolean, default: false },
     resetPasswordToken: { type: String },
     resetPasswordExpiry: { type: Date },
+    youtubeTokens: {
+        accessToken: { type: String },
+        refreshToken: { type: String },
+        expiryDate: { type: Number }
+    }
 }, {
     timestamps: true
 });

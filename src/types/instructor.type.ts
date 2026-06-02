@@ -11,6 +11,11 @@ export interface IInstructor extends mongoose.Document {
     isVerified: boolean;
     resetPasswordToken?: string;
     resetPasswordExpiry?: Date;
+    youtubeTokens?: {
+        accessToken: string;
+        refreshToken: string;
+        expiryDate: number;
+    };
 }
 
 export type InstructorLoginReqBody = {

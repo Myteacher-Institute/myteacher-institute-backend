@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { Admin } from "../models/admin.model";
 import bcrypt from "bcryptjs";
-import { AddAdminReqBody, AddAdminResT } from "../types/admin.type";
+import { AddAdminReqBody, AddAdminResT } from "../types";
 
 const handleAddAdmin = async (req: Request<AddAdminReqBody>, res: Response<AddAdminResT>) => {
     try {
