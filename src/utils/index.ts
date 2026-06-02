@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import { Request } from 'express';
 import IPLocate from 'node-iplocate';
 import { Resend } from 'resend';
-import { handleVerifyPasswordResT } from '../types/controller/auth.types';
+import { handleVerifyPasswordResT } from '../types/auth.types';
 
 export const logger = {
   info: (message: string): void => console.log(`ℹ️  ${message}`),

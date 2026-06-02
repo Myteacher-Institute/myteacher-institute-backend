@@ -13,7 +13,7 @@ import {
   handleAuthenticateResT,
   HandleGetAccessTokenResponseT,
   handleVerifyPasswordResT,
-} from '../types/controller/auth.types';
+} from '../types/auth.types';
 
 export const authenticateUser = async (
   req: Request<any, any, { email: string, role: "user" | "instructor" }>

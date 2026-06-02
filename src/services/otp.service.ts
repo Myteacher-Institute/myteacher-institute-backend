@@ -12,7 +12,7 @@ import {
   handleVerifyOtpResT,
   handleSendResetInstructionsResT,
   handleResetPasswordWithCodeResT,
-} from '../types/controller/auth.types';
+} from '../types/auth.types';
 
 export const verifyOtp = async (
   req: Request<any, any, { otp: string }>

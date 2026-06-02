@@ -7,7 +7,7 @@ import {
   handleSendResetInstructionsResT,
   handleVerifyOtpResT,
   handleVerifyPasswordResT,
-} from '../types/controller/auth.types';
+} from '../types/auth.types';
 
 import {
   authenticateUser,
