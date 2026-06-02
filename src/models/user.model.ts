@@ -1,13 +1,5 @@
 import mongoose from 'mongoose';
-
-interface IUser extends mongoose.Document {
-    password: string;
-    email: string;
-    name: string;
-    phone?: string;
-    isEmailVerified: boolean;
-    coursesBought: mongoose.Schema.Types.ObjectId[];
-}
+import { IUser } from '../types';
 
 const userSchema = new mongoose.Schema<IUser>({
     password: {
@@ -35,6 +27,14 @@ const userSchema = new mongoose.Schema<IUser>({
     coursesBought: {
         type: [mongoose.Schema.Types.ObjectId],
         ref: 'course'
+    },
+    hasOnboarded: {
+      type: Boolean,
+      default: false,
+    },
+    role: {
+      type: String,
+      enum: ["user", "instructor", "admin"]
     }
 }, {
     timestamps: true
@@ -44,3 +44,5 @@ const User = mongoose.model('user', userSchema);
 
 export default User;
 export type { IUser };
+
+

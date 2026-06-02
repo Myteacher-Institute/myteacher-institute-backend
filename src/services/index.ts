@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Business logic and service layer
 // Add database operations, external API calls, etc. here
 
@@ -114,3 +115,13 @@ export {
 };
 
 export type { signupReqBody, signupErrorReqBody, signupSuccessReqBody, signupResponse };
+=======
+export * from './otp.service';
+export * from './auth.service';
+export * from './oauth.service';
+export * from './token.service';
+export * from './email.service';
+export * from './session.service';
+export * from './password.service';
+export * from './onboarding.service';
+>>>>>>> messiah/feat-auth-polish

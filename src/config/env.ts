@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const config = {
+<<<<<<< HEAD
     port: parseInt(process.env.PORT || '5000', 10),
     nodeEnv: (process.env.NODE_ENV || 'development') as 'development' | 'production' | 'test',
     mongodb: {
@@ -16,6 +17,17 @@ export const config = {
         clientSecret: process.env.FLUTTERWAVE_CLIENT_SECRET ?? "",
         encryptionKey: process.env.FLUTTERWAVE_ENCRYPTION_KEY ?? ""
     }
+=======
+  port: parseInt(process.env.PORT || '5000', 10),
+  nodeEnv: (process.env.NODE_ENV || 'development') as 'development' | 'production' | 'test',
+  mongodb: {
+    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/myteacher-institute',
+  },
+  JWT_REFRESH_TOKEN_SECRET: process.env.JWT_REFRESH_TOKEN_SECRET ?? '',
+  JWT_ACCESS_TOKEN_SECRET: process.env.JWT_ACCESS_TOKEN_SECRET ?? '',
+  REFRESH_TOKEN_COOKIE_NAME: process.env.REFRESH_TOKEN_COOKIE_NAME ?? '',
+  BACKEND_BASE_URL: process.env.BACKEND_BASE_URL ?? 'http://localhost:3000',
+>>>>>>> messiah/feat-auth-polish
 };
 
 export default config;
