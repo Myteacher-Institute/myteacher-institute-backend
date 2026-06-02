@@ -4,3 +4,4 @@ export * from './oauth.service';
 export * from './token.service';
 export * from './email.service';
 export * from './session.service';
+export * from './onboarding.service';

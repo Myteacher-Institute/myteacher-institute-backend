@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { User } from '@/models';
+import { IUser } from '@/types';
 
 type CompleteOnboardingInput = {
     name: string;
@@ -8,7 +9,7 @@ type CompleteOnboardingInput = {
 };
 
 type CompleteOnboardingResult =
-    | { isSuccessful: true }
+    | { isSuccessful: true; user: IUser }
     | { isSuccessful: false; reason: string };
 
 export const completeOnboarding = async ({
@@ -40,7 +41,12 @@ export const completeOnboarding = async ({
             }
         );
 
-        return { isSuccessful: true };
+        const updatedUser = await User.findById(userId);
+        if (!updatedUser) {
+            return { isSuccessful: false, reason: 'Unable to load updated user' };
+        }
+
+        return { isSuccessful: true, user: updatedUser };
     } catch (err) {
         return { isSuccessful: false, reason: 'Onboarding failed' };
     }

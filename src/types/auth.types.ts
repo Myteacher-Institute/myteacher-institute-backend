@@ -38,6 +38,13 @@ type handleVerifyOtpErrorT = {
   message: string;
 };
 
+type handleVerifyOtpOnboardingSuccessT = {
+  status: 'success';
+  message: string;
+  nextStep: 'onboarding';
+  userId: string;
+};
+
 type handleVerifySuccessT = {
   status: 'success';
   message: string;
@@ -45,7 +52,21 @@ type handleVerifySuccessT = {
   accessToken: string;
 };
 
-export type handleVerifyOtpResT = handleVerifyOtpErrorT | handleVerifySuccessT;
+type handleCompleteOnboardingSuccessT = {
+  status: 'success';
+  message: string;
+  authUser: IUser;
+  accessToken: string;
+};
+
+type handleCompleteOnboardingErrorT = {
+  status: 'failed';
+  message: string;
+};
+
+export type handleVerifyOtpResT = handleVerifyOtpErrorT | handleVerifyOtpOnboardingSuccessT | handleVerifySuccessT;
+
+export type handleCompleteOnboardingResT = handleCompleteOnboardingSuccessT | handleCompleteOnboardingErrorT;
 
 export type handleVerifyPasswordResT =
   | handleVerifyPasswordErrorT

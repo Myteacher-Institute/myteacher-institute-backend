@@ -14,7 +14,7 @@ import {
 } from '@/types/auth.types';
 
 export const verifyOtp = async (
-  req: Request<any, any, { otp: string }>
+  req: Request<any, any, { otp: string; email?: string }>
 ): Promise<{ status: number; body: handleVerifyOtpResT }> => {
   try {
     const { otp } = req.body || {};
@@ -45,6 +45,7 @@ export const verifyOtp = async (
     const userAgent = req.get('User-Agent') || '';
 
     if (findOtp.useCase === 'new-account') {
+      await User.updateOne({ _id: findUser._id }, { $set: { isEmailVerified: true } });
       return {
         status: 200,
         body: {
