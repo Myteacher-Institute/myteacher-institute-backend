@@ -1,6 +1,3 @@
-// Business logic and service layer
-// Add database operations, external API calls, etc. here
-
-// TODO: Add services here
-
-export default {};
+export * from './auth.service';
+export * from './otp.service';
+export * from './send-email';

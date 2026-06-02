@@ -107,6 +107,14 @@ export const generateSession = async ({
     const expiresAt = new Date();
     expiresAt.setMonth(expiresAt.getMonth() + 1);
 
+    const countSessions = await Session.countDocuments({
+      userId,
+    });
+
+    if (countSessions >= 12) {
+      return { isSuccessful: false, reason: 'Too many sessions' };
+    }
+
     const newSession = await Session.create({
       userId,
       ip: resolvedIp,

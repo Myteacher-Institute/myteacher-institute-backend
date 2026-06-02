@@ -7,6 +7,7 @@ interface IUser extends mongoose.Document {
   phone?: string;
   isEmailVerified: boolean;
   hasOnboarded: boolean;
+  role: "user" | "instructor" | "admin"
 }
 
 const userSchema = new mongoose.Schema<IUser>(
@@ -35,6 +36,10 @@ const userSchema = new mongoose.Schema<IUser>(
       type: Boolean,
       default: false,
     },
+    role: {
+      type: String,
+      enum: ["user", "instructor", "admin"]
+    }
   },
   {
     timestamps: true,
@@ -47,4 +52,3 @@ export default User;
 export type { IUser };
 
 
-  

@@ -1,0 +1,537 @@
+# ---------------------------------------------------------------------------
+# Authentication paths
+# ---------------------------------------------------------------------------
+
+/api/auth/initiate:
+  post:
+    tags: [Authentication]
+    summary: Initiate authentication process
+    description: >
+      Starts the authentication flow by checking if the user exists and
+      determining the next step — either password entry or OTP verification.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/InitiateAuthBody"
+    responses:
+      "200":
+        description: Authentication initiated successfully
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    status:
+                      type: string
+                      enum: [success]
+                    instruction:
+                      type: string
+                      enum: [give-password]
+                    message:
+                      type: string
+                  example:
+                    status: success
+                    instruction: give-password
+                    message: User onboarded, password required
+                - type: object
+                  properties:
+                    status:
+                      type: string
+                      enum: [success]
+                    instruction:
+                      type: string
+                      enum: [give-code]
+                    message:
+                      type: string
+                  example:
+                    status: success
+                    instruction: give-code
+                    message: An OTP code has been sent to your email. Please verify to continue.
+      "400":
+        description: Invalid input
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                errorOnInput:
+                  type: boolean
+                status:
+                  type: string
+                  enum: [failed]
+                message:
+                  type: string
+              example:
+                errorOnInput: true
+                status: failed
+                message: Email is required
+      "429":
+        description: Rate limited
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                errorOnInput:
+                  type: boolean
+                status:
+                  type: string
+                  enum: [failed]
+                message:
+                  type: string
+              example:
+                errorOnInput: false
+                status: failed
+                message: Too many attempts. Please wait 15 minutes to request another code.
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InternalServerError"
+
+/api/auth/verify-password:
+  post:
+    tags: [Authentication]
+    summary: Verify user password
+    description: >
+      Authenticates the user with their password. Returns an access token for
+      trusted devices, or triggers an OTP flow for unrecognised devices.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/VerifyPasswordBody"
+    responses:
+      "200":
+        description: Password verified successfully
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  description: Trusted device — access token returned
+                  properties:
+                    status:
+                      type: string
+                      enum: [success]
+                    isTrusted:
+                      type: boolean
+                      enum: [true]
+                    message:
+                      type: string
+                    access_code:
+                      type: string
+                  example:
+                    status: success
+                    isTrusted: true
+                    message: Welcome back! You have successfully logged in to your account.
+                    access_code: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                - type: object
+                  description: Untrusted device — OTP sent
+                  properties:
+                    status:
+                      type: string
+                      enum: [success]
+                    isTrusted:
+                      type: boolean
+                      enum: [false]
+                    isGiveCode:
+                      type: boolean
+                      enum: [true]
+                    isCompleted:
+                      type: boolean
+                      enum: [false]
+                    message:
+                      type: string
+                  example:
+                    status: success
+                    isTrusted: false
+                    isGiveCode: true
+                    isCompleted: false
+                    message: A verification code has been sent to your email. Please enter it to continue.
+      "400":
+        description: Invalid credentials or input
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                errorOnInput:
+                  type: string
+                  enum: [email, password, "false"]
+                status:
+                  type: string
+                  enum: [failed]
+                message:
+                  type: string
+              example:
+                errorOnInput: password
+                status: failed
+                message: The password you entered is incorrect. Please try again.
+      "404":
+        description: User not found or not onboarded
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                errorOnInput:
+                  type: boolean
+                status:
+                  type: string
+                  enum: [failed]
+                message:
+                  type: string
+              example:
+                errorOnInput: false
+                status: failed
+                message: Wrong endpoint. Please contact support.
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InternalServerError"
+            example:
+              status: failed
+              message: Something unexpected happened. Please try again.
+
+/api/auth/verify-otp:
+  post:
+    tags: [Authentication]
+    summary: Verify OTP code
+    description: Verifies the OTP code sent to the user's email and completes authentication.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/VerifyOtpBody"
+    responses:
+      "200":
+        description: OTP verified successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [success]
+                message:
+                  type: string
+                authUser:
+                  $ref: "#/components/schemas/AuthUser"
+                accessToken:
+                  type: string
+              example:
+                status: success
+                message: OTP verified successfully
+                authUser:
+                  _id: 64a1b2c3d4e5f6789012345
+                  email: user@example.com
+                  hasOnboarded: true
+                  createdAt: "2023-07-01T12:00:00.000Z"
+                  updatedAt: "2023-07-01T12:00:00.000Z"
+                accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+      "400":
+        description: Invalid OTP or input
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FailedMessage"
+            example:
+              status: failed
+              message: Invalid or expired OTP code
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InternalServerError"
+
+/api/auth/new-access-code:
+  get:
+    tags: [Authentication]
+    summary: Get new access token
+    description: Generates a new access token using the refresh token stored in the HTTP-only cookie.
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: New access token generated
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [success]
+                message:
+                  type: string
+                accessToken:
+                  type: string
+              example:
+                type: success
+                message: Access token generated successfully
+                accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+      "401":
+        description: No refresh token provided
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [no-refresh]
+                message:
+                  type: string
+              example:
+                type: no-refresh
+                message: No refresh token provided
+      "403":
+        description: Invalid refresh token
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [invalid-refresh]
+                message:
+                  type: string
+              example:
+                type: invalid-refresh
+                message: Invalid refresh token
+      "500":
+        description: Server error
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [server-error]
+                message:
+                  type: string
+              example:
+                type: server-error
+                message: Failed to generate access token
+
+/api/auth/request-reset-account-instructions:
+  post:
+    tags: [Authentication]
+    summary: Request password reset instructions
+    description: Sends a password reset link to the user's email address.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RequestResetBody"
+    responses:
+      "200":
+        description: Reset instructions sent successfully
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SuccessMessage"
+            example:
+              status: success
+              message: Password reset instructions have been sent to your email
+      "400":
+        description: Invalid input
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FailedMessage"
+            example:
+              status: failed
+              message: Email is required
+      "404":
+        description: User not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FailedMessage"
+            example:
+              status: failed
+              message: User not found
+      "429":
+        description: Rate limited
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FailedMessage"
+            example:
+              status: failed
+              message: Too many reset attempts. Please try again later.
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InternalServerError"
+            example:
+              status: failed
+              message: Failed to send reset instructions
+
+/api/auth/reset-password-with-code:
+  post:
+    tags: [Authentication]
+    summary: Reset password with code
+    description: Resets the user's password using the reset code and optionally logs out all devices.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ResetPasswordBody"
+    responses:
+      "200":
+        description: Password reset successful
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SuccessMessage"
+            examples:
+              with-logout:
+                summary: Success with device logout
+                value:
+                  status: success
+                  message: Password has been reset successfully and all devices have been logged out
+              without-logout:
+                summary: Success without device logout
+                value:
+                  status: success
+                  message: Password has been reset successfully
+      "400":
+        description: Invalid input or validation error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FailedMessage"
+            examples:
+              missing-code:
+                summary: Reset code required
+                value:
+                  status: failed
+                  message: Reset code is required
+              password-too-short:
+                summary: Password too short
+                value:
+                  status: failed
+                  message: Password must be at least 6 characters long
+              passwords-mismatch:
+                summary: Passwords do not match
+                value:
+                  status: failed
+                  message: Passwords do not match
+              invalid-code:
+                summary: Invalid reset code
+                value:
+                  status: failed
+                  message: Invalid or expired reset code
+      "403":
+        description: Account not onboarded
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FailedMessage"
+            example:
+              status: failed
+              message: This feature is not available for your account. Please complete account setup first.
+      "404":
+        description: User not found
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FailedMessage"
+            example:
+              status: failed
+              message: User not found
+      "500":
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InternalServerError"
+
+/api/auth/google/callback:
+  get:
+    tags: [Authentication]
+    summary: Google OAuth callback
+    description: >
+      Handles the Google OAuth2 callback. Google redirects here after the user
+      grants consent. On success or failure the server redirects the client to
+      `{FRONTEND_BASE_URL}/oauth/google?status=<value>`.
+      The `status` query param is the single source of truth for the client.
+    parameters:
+      - in: query
+        name: code
+        required: true
+        schema:
+          type: string
+        description: Authorization code from Google
+      - in: query
+        name: iss
+        required: true
+        schema:
+          type: string
+        description: Issuer identifier from Google
+      - in: query
+        name: scope
+        required: true
+        schema:
+          type: string
+        description: Granted OAuth scopes
+      - in: query
+        name: authuser
+        required: true
+        schema:
+          type: string
+        description: Google account index
+      - in: query
+        name: prompt
+        required: true
+        schema:
+          type: string
+        description: Consent prompt type
+      - in: query
+        name: state
+        required: false
+        schema:
+          type: string
+          enum: [user, instructor]
+        description: >
+          Optional role to assign when a new account is created via OAuth.
+          Must be `user` or `instructor`. Any missing, invalid, or unrecognised
+          value falls back to `user`. Has no effect on existing accounts.
+    responses:
+      "302":
+        description: Redirect to frontend with status param
+        headers:
+          Location:
+            schema:
+              type: string
+            description: Redirect URL containing the ?status= query param
+        content:
+          text/plain:
+            schema:
+              type: string
+              enum:
+                - "{FRONTEND_BASE_URL}/oauth/google?status=success"
+                - "{FRONTEND_BASE_URL}/oauth/google?status=invalid_params"
+                - "{FRONTEND_BASE_URL}/oauth/google?status=token_error"
+                - "{FRONTEND_BASE_URL}/oauth/google?status=incomplete_info"
+                - "{FRONTEND_BASE_URL}/oauth/google?status=session_failed"
+                - "{FRONTEND_BASE_URL}/oauth/google?status=server_error"

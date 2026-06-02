@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { Request } from 'express';
 import IPLocate from 'node-iplocate';
 import { Resend } from 'resend';
+import { handleVerifyPasswordResT } from '../types/controller/auth.types';
 
 export const logger = {
   info: (message: string): void => console.log(`ℹ️  ${message}`),
@@ -51,6 +52,62 @@ export const generateJWT = (args: generateJWT): string | 'error' => {
     logger.error(`generateJWTCookie error -> ${(error as Error)?.message ?? error}`);
     return 'error';
   }
+};
+
+export const validateVerifyPasswordInput = (
+  email: any,
+  password: any
+): true | handleVerifyPasswordResT => {
+  if (typeof email !== 'string') {
+    return {
+      errorOnInput: 'email',
+      status: 'failed',
+      message: 'Email must be a string',
+    };
+  }
+
+  if (!email) {
+    return {
+      errorOnInput: 'email',
+      status: 'failed',
+      message: 'Email is required',
+    };
+  }
+
+  if (typeof password !== 'string') {
+    return {
+      errorOnInput: 'password',
+      status: 'failed',
+      message: 'Password must be a string',
+    };
+  }
+
+  if (!password) {
+    return {
+      errorOnInput: 'password',
+      status: 'failed',
+      message: 'Password is required',
+    };
+  }
+
+  if (password.length < 6) {
+    return {
+      errorOnInput: 'password',
+      status: 'failed',
+      message: 'Password must be at least 6 characters long',
+    };
+  }
+
+  return true;
+};
+
+export const getHandleVerifyOtpSuccessMessage = (useCase: string): string => {
+  if (useCase === 'new-account') {
+    return 'Account verified successfully! Welcome aboard.';
+  } else if (useCase === 'onboarded-account') {
+    return 'Device verified successfully! You can now access your account.';
+  }
+  return 'Verification successful!';
 };
 
 export default logger;

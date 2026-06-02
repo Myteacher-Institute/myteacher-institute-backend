@@ -1,7 +1,6 @@
 import createApp from './app';
-import { connectDB } from './config/database';
 import config from './config/env';
-
+import { connectDB } from './config/database';
 
 const startServer = async (): Promise<void> => {
     try {
@@ -13,9 +12,6 @@ const startServer = async (): Promise<void> => {
 
         // Create Express app
         const app = createApp();
-
-        // Mount Scalar API docs
-        
 
         // Start Express server
         app.listen(config.port, () => {
