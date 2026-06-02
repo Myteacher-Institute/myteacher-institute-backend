@@ -1,12 +1,11 @@
-import path from 'path';
 import fs from 'fs';
-import Otp from '../models/otp.model';
-import logger, { resend } from '../utils';
-import VerifyAccountEmail from '../templates/emails/verify-account-email';
-import ResetPasswordEmail from '../templates/emails/reset-password-instruction';
+import path from 'path';
+import Otp from '@/models/otp.model';
+import logger, { resend } from '@/utils';
+import VerifyAccountEmail from '@/templates/emails/verify-account-email';
+import ResetPasswordEmail from '@/templates/emails/reset-password-instruction';
 
 const logoPath = path.join(process.cwd(), 'src', 'assets', 'logo.png');
-
 
 const logoBuffer = fs.readFileSync(logoPath);
 

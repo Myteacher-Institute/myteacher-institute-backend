@@ -1,7 +1,4 @@
 import mongoose from "mongoose";
-// Type definitions for the application
-// Add your custom types and interfaces here
-
 
 export interface IUser extends mongoose.Document {
     password: string;

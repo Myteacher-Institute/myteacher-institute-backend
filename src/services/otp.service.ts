@@ -2,17 +2,16 @@ import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import { Request } from 'express';
 
-import { User, Otp, Session } from '../models';
-import logger, { generateJWT, getClientIp } from '../utils';
-import { generateSession } from '../utils/create-session';
-import { sendResetPasswordEmail } from './send-email';
-import { getHandleVerifyOtpSuccessMessage } from '../utils';
+import { User, Otp, Session } from '@/models';
+import { generateSession } from '@/utils/create-session';
+import { sendResetPasswordEmail } from './email.service';
+import logger, { generateJWT, getClientIp, getHandleVerifyOtpSuccessMessage } from '@/utils';
 
 import {
   handleVerifyOtpResT,
   handleSendResetInstructionsResT,
   handleResetPasswordWithCodeResT,
-} from '../types/auth.types';
+} from '@/types/auth.types';
 
 export const verifyOtp = async (
   req: Request<any, any, { otp: string }>

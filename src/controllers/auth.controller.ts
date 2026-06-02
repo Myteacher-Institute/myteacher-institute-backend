@@ -1,23 +1,23 @@
 import { Request, Response } from 'express';
 
 import {
+  handleVerifyOtpResT,
   handleAuthenticateResT,
+  handleVerifyPasswordResT,
   HandleGetAccessTokenResponseT,
   handleResetPasswordWithCodeResT,
   handleSendResetInstructionsResT,
-  handleVerifyOtpResT,
-  handleVerifyPasswordResT,
-} from '../types/auth.types';
+} from '@/types/auth.types';
 
 import {
-  authenticateUser,
-  verifyPassword,
   verifyOtp,
+  verifyPassword,
   getAccessToken,
+  googleCallback,
+  authenticateUser,
   sendResetInstructions,
   resetPasswordWithCode,
-  googleCallback,
-} from '../services';
+} from '@/services';
 
 export const handleAuthenticateUser = async (
   req: Request<any, any, { email: string, role: "user" | "instructor" }>,
