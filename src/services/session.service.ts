@@ -1,8 +1,7 @@
 import { UAParser } from 'ua-parser-js';
 
-import { ClientInfo, DeviceType, GeoInfo, Session } from '../models/session.model';
-
-import { generateJWT, IPLocateClient } from '.';
+import { generateJWT, IPLocateClient } from '@/utils';
+import { ClientInfo, DeviceType, GeoInfo, Session } from '@/models/session.model';
 
 type GenerateSessionPayload = {
   ip: string;
@@ -91,6 +90,7 @@ const resolveIp = (ip: string): string => {
  * @param payload.userId - User's unique identifier
  * @returns Promise resolving to session generation result with token and sessionId on success, or failure reason
  */
+
 export const generateSession = async ({
   ip,
   userAgent,

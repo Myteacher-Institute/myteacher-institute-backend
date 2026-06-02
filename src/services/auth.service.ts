@@ -1,10 +1,10 @@
 import bcrypt from 'bcryptjs';
-import { Request, Response } from 'express';
+import { Request } from 'express';
 
 import config from '@/config/env';
 import { User, Otp, Session } from '@/models';
+import { generateSession } from './session.service';
 import { sendVerificationEmail } from './email.service';
-import { generateSession } from '@/utils/create-session';
 import { handleAuthenticateResT, handleVerifyPasswordResT } from '@/types/auth.types';
 import logger, { generateJWT, getClientIp, validateVerifyPasswordInput } from '@/utils';
 

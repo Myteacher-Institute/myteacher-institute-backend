@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { Request } from 'express';
 
 import { User, Otp, Session } from '@/models';
-import { generateSession } from '@/utils/create-session';
+import { generateSession } from './session.service';
 import { sendResetPasswordEmail } from './email.service';
 import logger, { generateJWT, getClientIp, getHandleVerifyOtpSuccessMessage } from '@/utils';
 

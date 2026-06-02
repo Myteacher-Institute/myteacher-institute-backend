@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import { User } from '@/models';
 import config from '@/config/env';
 import logger, { getClientIp } from '@/utils';
-import { generateSession } from '@/utils/create-session';
+import { generateSession } from './session.service';
 
 type GoogleCallbackQuery = {
     iss: string;
