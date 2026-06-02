@@ -1,10 +1,6 @@
 import createApp from './app';
 import config from './config/env';
 import { connectDB } from './config/database';
-import config from './config/env';
-import authRoute from './routes/auth.routes';
-import youtubeUploadRoutes from "./routes/youtube-upload.routes";
-import paymentRoutes from './routes/payment.routes';
 
 const startServer = async (): Promise<void> => {
     try {
@@ -16,11 +12,6 @@ const startServer = async (): Promise<void> => {
 
         // Create Express app
         const app = createApp();
-
-        app.use("/api/auth", authRoute);
-        app.use("/youtube", youtubeUploadRoutes);
-        app.use("/api/payment", paymentRoutes);
-
 
         // Start Express server
         app.listen(config.port, () => {

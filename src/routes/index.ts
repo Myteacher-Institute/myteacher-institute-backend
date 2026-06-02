@@ -1,15 +1,7 @@
 // Route definitions
-import authRoutes from './auth.routes';
-import adminRoutes from './admin.routes';
-import courseRoutes from './course.routes';
-import instructorRoutes from './instructor.routes';
-import { type Router, Router as ExpressRouter } from 'express';
-
-const router: Router = ExpressRouter();
-
-router.use('/auth', authRoutes);
-router.use('/admin', adminRoutes);
-router.use('/course', courseRoutes);
-router.use('/instructor', instructorRoutes);
-
-export default router;
+export { default as authRouter } from './auth.routes';
+export { default as adminRouter } from './admin.routes';
+export { default as courseRouter } from './course.routes';
+export { default as paymentRouter } from './payment.routes';
+export { default as youtubeRouter } from './youtube.routes';
+export { default as instructorRouter } from './instructor.routes';
