@@ -1,31 +1,52 @@
 import bcrypt from 'bcryptjs';
+import { Request } from 'express';
+
 import { User } from '@/models';
-import { IUser } from '@/types';
+import { generateSession } from './session.service';
+import logger, { generateJWT, getClientIp } from '@/utils';
+import { handleCompleteOnboardingResT } from '@/types/auth.types';
 
-type CompleteOnboardingInput = {
-    name: string;
-    userId: string;
-    password: string;
-};
-
-type CompleteOnboardingResult =
-    | { isSuccessful: true; user: IUser }
-    | { isSuccessful: false; reason: string };
-
-export const completeOnboarding = async ({
-    name,
-    userId,
-    password,
-}: CompleteOnboardingInput): Promise<CompleteOnboardingResult> => {
+export const completeOnboarding = async (
+    req: Request<any, any, { name: string; userId: string; password: string }>
+): Promise<{ status: number; body: handleCompleteOnboardingResT }> => {
     try {
+        const { name, userId, password } = req.body || {};
+
+        if (!userId || typeof userId !== 'string') {
+            return {
+                status: 400,
+                body: { status: 'failed', message: 'User ID is required' },
+            };
+        }
+
+        if (!name || typeof name !== 'string') {
+            return {
+                status: 400,
+                body: { status: 'failed', message: 'Name is required' },
+            };
+        }
+
+        if (!password || typeof password !== 'string' || password.length < 6) {
+            return {
+                status: 400,
+                body: { status: 'failed', message: 'Password must be at least 6 characters long' },
+            };
+        }
+
         const user = await User.findById(userId);
 
         if (!user) {
-            return { isSuccessful: false, reason: 'User not found' };
+            return {
+                status: 400,
+                body: { status: 'failed', message: 'User not found' },
+            };
         }
 
         if (user.hasOnboarded) {
-            return { isSuccessful: false, reason: 'User already onboarded' };
+            return {
+                status: 400,
+                body: { status: 'failed', message: 'User already onboarded' },
+            };
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -42,12 +63,55 @@ export const completeOnboarding = async ({
         );
 
         const updatedUser = await User.findById(userId);
+
         if (!updatedUser) {
-            return { isSuccessful: false, reason: 'Unable to load updated user' };
+            return {
+                status: 500,
+                body: { status: 'failed', message: 'Unable to load updated user' },
+            };
         }
 
-        return { isSuccessful: true, user: updatedUser };
-    } catch (err) {
-        return { isSuccessful: false, reason: 'Onboarding failed' };
+        // ✅ SESSION + TOKEN (matches verifyOtp pattern)
+        const ip = getClientIp(req);
+        const userAgent = req.get('User-Agent') || '';
+
+        const sessionRes = await generateSession({
+            ip,
+            userAgent,
+            userId: userId,
+        });
+
+        if (!sessionRes.isSuccessful) {
+            return {
+                status: 400,
+                body: { status: 'failed', message: sessionRes.reason },
+            };
+        }
+
+        const accessToken = generateJWT({
+            sessionId: sessionRes.sessionId,
+            type: 'access',
+            userId: userId,
+        });
+
+        return {
+            status: 200,
+            body: {
+                status: 'success',
+                message: 'Onboarding completed successfully',
+                authUser: updatedUser,
+                accessToken: accessToken as string,
+            },
+        };
+    } catch (error) {
+        logger.error(`Error on @completeOnboarding: ${(error as Error)?.message ?? error}`);
+
+        return {
+            status: 500,
+            body: {
+                status: 'failed',
+                message: 'Internal server error',
+            },
+        };
     }
 };
