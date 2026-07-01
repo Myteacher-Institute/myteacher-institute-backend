@@ -32,9 +32,9 @@ const instructorSchema = new Schema<IInstructor>({
     resetPasswordToken: { type: String },
     resetPasswordExpiry: { type: Date },
     youtubeTokens: {
-        accessToken: { type: String },
-        refreshToken: { type: String },
-        expiryDate: { type: Number }
+        accessToken: { type: String, default: '' },
+        refreshToken: { type: String, default: '' },
+        expiryDate: { type: Number, default: 0 }
     }
 }, {
     timestamps: true

@@ -8,8 +8,13 @@ import {
     ApplyInstructorReqBody, 
     ApplyInstructorResT, 
     VerifyInstructorResT, 
+    VerifyInstructorOtpReqBody,
+    VerifyInstructorOtpResT,
+    ResendInstructorOtpReqBody,
+    ResendInstructorOtpResT,
 } from "../types";
-import { instructorLoginValidation, applyInstructorValidation, verifyInstructor } from "../services";
+import { instructorLoginValidation, applyInstructorValidation, verifyInstructor, verifyInstructorOtp, resendInstructorOtp } from "../services";
+import { sendInstructorApplicationEmail, sendVerificationEmail } from "../services/email.service";
 
 const handleInstructorLogin = async (req: Request<InstructorLoginReqBody>, res: Response<InstructorLoginResT>) => {
     try {
@@ -30,37 +35,31 @@ const handleInstructorLogin = async (req: Request<InstructorLoginReqBody>, res: 
         }
         const userId = instructor._id.toString();
 
-        const refreshToken = await generateJWTCookie({
-            type: "refresh",
-            userId,
-        });
+        const emailResult = await sendVerificationEmail(userId, instructor.email, 'login');
 
-        const accessToken = await generateJWTCookie({
-            type: "access",
-            userId,
-        });
-
-        if (refreshToken === "error" || accessToken === "error") {
-            return res.status(500).json({
+        if (emailResult === 'rate-limited') {
+            return res.status(429).json({
                 status: "failed",
-                message: "Something unexpected happened, try again"
+                message: "Too many login attempts. Please wait 15 minutes before trying again."
             });
         }
 
-        const REFRESH_TOKEN_COOKIE_NAME = config["REFRESH_TOKEN_COOKIE_NAME"];
-
-        res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken);
+        if (emailResult === 'error') {
+            return res.status(500).json({
+                status: "failed",
+                message: "Failed to send verification code. Please try again."
+            });
+        }
 
         return res.status(200).json({
             status: "success",
-            message: "Login successful",
+            message: "Verification code sent to your email",
             instructor: {
                 name: instructor.name,
                 email: instructor.email,
                 profilePicture: instructor.profilePicture,
                 isVerified: instructor.isVerified
-            },
-            accessToken
+            }
         });
 
     } catch (error) {
@@ -93,6 +92,8 @@ const handleApplyAsInstructor = async (req: Request<ApplyInstructorReqBody>, res
             profilePicture,
             isVerified: false
         });
+
+        await sendInstructorApplicationEmail({ name, email, phone });
 
         return res.status(201).json({
             status: "success",
@@ -140,4 +141,58 @@ const handleVerifyInstructor = async (req: Request<{ instructorId: string }>, re
     }
 };
 
-export { handleInstructorLogin, handleApplyAsInstructor, handleVerifyInstructor };
+const handleVerifyInstructorOtp = async (req: Request<VerifyInstructorOtpReqBody>, res: Response<VerifyInstructorOtpResT>) => {
+    try {
+        const { otp } = req.body;
+        const result = await verifyInstructorOtp(otp, req);
+
+        if (!result.success) {
+            return res.status(400).json({
+                status: "failed",
+                message: result.message
+            });
+        }
+
+        return res.status(200).json({
+            status: "success",
+            message: result.message,
+            instructor: result.instructor,
+            accessToken: result.accessToken
+        });
+
+    } catch (error) {
+        console.error('Verify instructor OTP error --->', (error as Error)?.message ?? error);
+        res.status(500).json({
+            status: "failed",
+            message: "Internal server error"
+        });
+    }
+};
+
+const handleResendInstructorOtp = async (req: Request<ResendInstructorOtpReqBody>, res: Response<ResendInstructorOtpResT>) => {
+    try {
+        const { email } = req.body;
+        const result = await resendInstructorOtp(email);
+
+        if (!result.success) {
+            return res.status(400).json({
+                status: "failed",
+                message: result.message
+            });
+        }
+
+        return res.status(200).json({
+            status: "success",
+            message: result.message
+        });
+
+    } catch (error) {
+        console.error('Resend instructor OTP error --->', (error as Error)?.message ?? error);
+        res.status(500).json({
+            status: "failed",
+            message: "Internal server error"
+        });
+    }
+};
+
+export { handleInstructorLogin, handleApplyAsInstructor, handleVerifyInstructor, handleVerifyInstructorOtp, handleResendInstructorOtp };

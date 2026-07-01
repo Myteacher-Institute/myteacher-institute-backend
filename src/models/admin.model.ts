@@ -2,23 +2,29 @@ import mongoose, { Schema } from "mongoose";
 import { IAdmin } from "../types";
 
 const adminSchema = new Schema<IAdmin>({
-    name: { 
-        type: String, 
-        required: true 
+    name: {
+        type: String,
+        required: true
     },
-    email: { 
-        type: String, 
-        required: true, 
-        unique: true 
+    email: {
+        type: String,
+        required: true,
+        unique: true
     },
-    password: { 
-        type: String, 
-        required: true 
+    password: {
+        type: String,
+        required: true
     },
-    isAdmin: { 
-        type: Boolean, 
-        default: true 
+    isAdmin: {
+        type: Boolean,
+        default: true
     },
+    resetPasswordToken: {
+        type: String
+    },
+    resetPasswordExpiry: {
+        type: Date
+    }
 }, {
     timestamps: true
 });

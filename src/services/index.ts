@@ -1,10 +1,10 @@
-<<<<<<< HEAD
 // Business logic and service layer
 // Add database operations, external API calls, etc. here
 
 import { IUser } from "../models/user.model";
 
-import { instructorLoginValidation, applyInstructorValidation, verifyInstructor, sendResetPasswordCode, resetPassword, resendResetPassword, rejectInstructor, getAllInstructors, getInstructorById, deleteInstructor, updateInstructor } from "./instructor.services";
+import { instructorLoginValidation, applyInstructorValidation, verifyInstructor, sendResetPasswordCode, resetPassword, resendResetPassword, rejectInstructor, getAllInstructors, getInstructorById, deleteInstructor, updateInstructor, verifyInstructorOtp, resendInstructorOtp } from "./instructor.services";
+import { adminLoginValidation, verifyAdminOtp, resendAdminOtp, sendAdminResetCode, resetAdminPassword } from "./admin.services";
 
 import { createPaymentLink, verifyTransaction, generateTransactionReference } from './flutterwave.services';
 
@@ -108,14 +108,22 @@ export {
     getInstructorById,
     deleteInstructor,
     updateInstructor,
+    verifyInstructorOtp,
+    resendInstructorOtp,
     createPaymentLink,
     verifyTransaction,
     generateTransactionReference,
-    addCourseValidation
+    addCourseValidation,
+    adminLoginValidation,
+    verifyAdminOtp,
+    resendAdminOtp,
+    sendAdminResetCode,
+    resetAdminPassword
 };
 
 export type { signupReqBody, signupErrorReqBody, signupSuccessReqBody, signupResponse };
-=======
+
+
 export * from './otp.service';
 export * from './auth.service';
 export * from './oauth.service';
@@ -124,4 +132,4 @@ export * from './email.service';
 export * from './session.service';
 export * from './password.service';
 export * from './onboarding.service';
->>>>>>> messiah/feat-auth-polish
+export * from './admin.services';

@@ -108,3 +108,31 @@ export type UpdateInstructorResT = {
     instructor?: IInstructor
 }
 
+export type VerifyInstructorOtpReqBody = {
+    otp: string;
+}
+
+export type VerifyInstructorOtpResT = {
+    status: "success" | "failed",
+    message: string,
+    instructor?: {
+        name: string;
+        email: string;
+        profilePicture: string;
+        phone: string;
+        courses: Array<any>;
+        moneyMade: number;
+        youtubeTokens: {} | any;
+        isVerified: boolean;
+    },
+    accessToken?: string
+}
+
+export type ResendInstructorOtpReqBody = {
+    email: string;
+}
+
+export type ResendInstructorOtpResT = {
+    status: "success" | "failed",
+    message: string
+}

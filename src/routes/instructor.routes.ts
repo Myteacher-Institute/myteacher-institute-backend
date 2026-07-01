@@ -1,15 +1,17 @@
 import { Router } from "express";
 
-import { 
-        handleInstructorLogin, 
-        handleApplyAsInstructor, 
-        handleVerifyInstructor 
+import {
+        handleInstructorLogin,
+        handleApplyAsInstructor,
+        handleVerifyInstructor,
+        handleVerifyInstructorOtp,
+        handleResendInstructorOtp
 } from "../controllers/instructor.controller";
 
-import { 
-        handleSendResetPasswordCode, 
-        handleResetPassword, 
-        handleResendResetPassword 
+import {
+        handleSendResetPasswordCode,
+        handleResetPassword,
+        handleResendResetPassword
 } from "../controllers/instructor-password.controller";
 
 import {
@@ -27,6 +29,8 @@ const router: Router = Router();
 
 router.post("/login", handleInstructorLogin);
 router.post("/apply", handleApplyAsInstructor);
+router.post("/verify-otp", handleVerifyInstructorOtp);
+router.post("/resend-otp", handleResendInstructorOtp);
 router.post("/send-reset-code", handleSendResetPasswordCode);
 router.post("/resend-reset-code", handleResendResetPassword);
 router.post("/reset-password", handleResetPassword);

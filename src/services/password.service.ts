@@ -1,11 +1,11 @@
 import bcrypt from 'bcryptjs';
 import { Request } from 'express';
 
-import config from '@/config/env';
-import { User, Otp, Session } from '@/models';
+import config from '../config/env';
+import { User, Otp, Session } from '../models';
 import { generateSession } from './session.service';
-import { handleVerifyPasswordResT } from '@/types/auth.types';
-import logger, { generateJWT, getClientIp, validateVerifyPasswordInput } from '@/utils';
+import { handleVerifyPasswordResT } from '../types/auth.types';
+import logger, { generateJWT, getClientIp, validateVerifyPasswordInput } from '../utils';
 
 export const verifyPassword = async (
     req: Request<any, any, { password?: string; email?: string }>

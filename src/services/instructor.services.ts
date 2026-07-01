@@ -3,6 +3,10 @@ import bcrypt from "bcryptjs";
 import { Resend } from "resend";
 import PasswordResetRequestEmail from "../templates/emails/password-reset-request";
 import PasswordResetCodeEmail from "../templates/emails/password-reset-code";
+import Otp from "../models/otp.model";
+import { generateSession } from "./session.service";
+import { generateJWT, getClientIp } from "../utils";
+import { sendVerificationEmail } from "./email.service";
 
 const instructorLoginValidation = async (payload: { email?: string; password?: string }) => {
     const { email, password } = payload;
@@ -364,4 +368,124 @@ const updateInstructor = async (instructorId: string, updateData: { name?: strin
     };
 };
 
-export { instructorLoginValidation, applyInstructorValidation, verifyInstructor, sendResetPasswordCode, resetPassword, resendResetPassword, rejectInstructor, getAllInstructors, getInstructorById, deleteInstructor, updateInstructor };
+const verifyInstructorOtp = async (otp: string, req: any) => {
+    if (!otp || typeof otp !== 'string') {
+        return {
+            success: false,
+            message: 'OTP is required and must be a string'
+        };
+    }
+
+    if (otp.length !== 6) {
+        return {
+            success: false,
+            message: 'OTP must be exactly 6 digits'
+        };
+    }
+
+    const findOtp = await Otp.findOne({ otp });
+
+    if (!findOtp) {
+        return {
+            success: false,
+            message: 'The verification code you entered is invalid or has expired. Please request a new one.'
+        };
+    }
+
+    await findOtp.deleteOne();
+
+    const findInstructor = await Instructor.findById(findOtp.accountToVerifyId);
+
+    if (!findInstructor) {
+        return {
+            success: false,
+            message: 'Instructor account not found. Please contact support.'
+        };
+    }
+
+    const ip = getClientIp(req);
+    const userAgent = req.get('User-Agent') || '';
+
+    if (findOtp.useCase === 'login') {
+        const sessionRes = await generateSession({ ip, userAgent, userId: findInstructor._id.toString() });
+
+        if (!sessionRes.isSuccessful) {
+            return {
+                success: false,
+                message: sessionRes.reason
+            };
+        }
+
+        const access_code = generateJWT({ sessionId: sessionRes.sessionId, type: 'access', userId: findInstructor._id.toString() });
+
+        return {
+            success: true,
+            message: 'Login successful',
+            instructor: {
+                name: findInstructor.name,
+                email: findInstructor.email,
+                profilePicture: findInstructor.profilePicture,
+                phone: findInstructor.phone,
+                courses: findInstructor.courses,
+                moneyMade: findInstructor.moneyMade,
+                youtubeTokens: findInstructor.youtubeTokens,
+                isVerified: findInstructor.isVerified
+            },
+            accessToken: access_code as string
+        };
+    }
+
+    return {
+        success: false,
+        message: 'Something unexpected happened. Try again later.'
+    };
+};
+
+const resendInstructorOtp = async (email: string) => {
+    if (!email) {
+        return {
+            success: false,
+            message: 'Email is required'
+        };
+    }
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+        return {
+            success: false,
+            message: 'Invalid email format'
+        };
+    }
+
+    const instructor = await Instructor.findOne({ email });
+
+    if (!instructor) {
+        return {
+            success: false,
+            message: 'Instructor not found'
+        };
+    }
+
+    const emailStatus = await sendVerificationEmail(instructor._id.toString(), instructor.email, 'login');
+
+    if (emailStatus === 'rate-limited') {
+        return {
+            success: false,
+            message: 'Too many attempts. Please wait 15 minutes to request another code.'
+        };
+    }
+
+    if (emailStatus === 'error') {
+        return {
+            success: false,
+            message: 'Failed to send verification email. Please try again.'
+        };
+    }
+
+    return {
+        success: true,
+        message: 'OTP code has been resent to your email.'
+    };
+};
+
+export { instructorLoginValidation, applyInstructorValidation, verifyInstructor, sendResetPasswordCode, resetPassword, resendResetPassword, rejectInstructor, getAllInstructors, getInstructorById, deleteInstructor, updateInstructor, verifyInstructorOtp, resendInstructorOtp };

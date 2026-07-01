@@ -1,8 +1,6 @@
-<<<<<<< HEAD
-import { InstructorLoginReqBody, InstructorLoginResT, ApplyInstructorReqBody, ApplyInstructorResT, GetAllInstructorsResT, RejectInstructorResT, VerifyInstructorResT, GetInstructorByIdResT, DeleteInstructorResT, UpdateInstructorResT, ResetPasswordReqBody, ResetPasswordResT, SendResetPasswordCodeReqBody, SendResetPasswordCodeResT, IInstructor } from "./instructor.type";
+import { InstructorLoginReqBody, InstructorLoginResT, ApplyInstructorReqBody, ApplyInstructorResT, GetAllInstructorsResT, RejectInstructorResT, VerifyInstructorResT, GetInstructorByIdResT, DeleteInstructorResT, UpdateInstructorResT, ResetPasswordReqBody, ResetPasswordResT, SendResetPasswordCodeReqBody, SendResetPasswordCodeResT, VerifyInstructorOtpReqBody, VerifyInstructorOtpResT, ResendInstructorOtpReqBody, ResendInstructorOtpResT, IInstructor } from "./instructor.type";
 
 import { CreatePaymentReqBody, CreatePaymentResT, VerifyPaymentResT, ITransaction } from './transaction.type';
-=======
 import mongoose from "mongoose";
 
 export interface IUser extends mongoose.Document {
@@ -12,13 +10,13 @@ export interface IUser extends mongoose.Document {
     phone?: string;
     isEmailVerified: boolean;
     hasOnboarded: boolean;
+    coursesBought: mongoose.Schema.Types.ObjectId[];
     role: "user" | "instructor" | "admin"
 }
->>>>>>> messiah/feat-auth-polish
 
-import { ICourse, CreateCourseReqBody, CreateCourseResT, UpdateCourseReqBody, UpdateCourseResT, DeleteCourseResT, GetCourseByIdResT, GetAllCoursesResT, FetchAllCoursesResT } from './course.type';
+import { ICourse, AddCourseReqBody, AddCourseResT, FetchCoursesByUserReqBody, FetchCoursesByUserResT, FetchAllCoursesResT } from './course.type';
 
-import { IAdmin, AddAdminReqBody, AddAdminResT } from './admin.type';
+import { IAdmin, AddAdminReqBody, AddAdminResT, AdminLoginReqBody, AdminLoginResT, VerifyAdminOtpReqBody, VerifyAdminOtpResT, ResendAdminOtpReqBody, ResendAdminOtpResT, SendAdminResetCodeReqBody, SendAdminResetCodeResT, ResetAdminPasswordReqBody, ResetAdminPasswordResT } from './admin.type';
 
 
 
@@ -40,20 +38,31 @@ export type {
     ResetPasswordResT,
     SendResetPasswordCodeReqBody,
     SendResetPasswordCodeResT,
+    VerifyInstructorOtpReqBody,
+    VerifyInstructorOtpResT,
+    ResendInstructorOtpReqBody,
+    ResendInstructorOtpResT,
     CreatePaymentReqBody,
     CreatePaymentResT,
     VerifyPaymentResT,
     ITransaction,
     ICourse,
-    CreateCourseReqBody,
-    CreateCourseResT,
-    UpdateCourseReqBody,
-    UpdateCourseResT,
-    DeleteCourseResT,
-    GetCourseByIdResT,
-    GetAllCoursesResT,
+    AddCourseReqBody,
+    AddCourseResT,
+    FetchCoursesByUserReqBody,
+    FetchCoursesByUserResT,
     FetchAllCoursesResT,
     IAdmin,
     AddAdminReqBody,
-    AddAdminResT
+    AddAdminResT,
+    AdminLoginReqBody,
+    AdminLoginResT,
+    VerifyAdminOtpReqBody,
+    VerifyAdminOtpResT,
+    ResendAdminOtpReqBody,
+    ResendAdminOtpResT,
+    SendAdminResetCodeReqBody,
+    SendAdminResetCodeResT,
+    ResetAdminPasswordReqBody,
+    ResetAdminPasswordResT
 };

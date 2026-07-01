@@ -95,3 +95,18 @@ export type handleSendResetInstructionsResT =
   | { status: 'success'; message: string };
 
 export type handleResetPasswordWithCodeResT = { status: 'failed' | 'success'; message: string };
+
+type handleRegisterErrorT = {
+  status: 'failed';
+  message: string;
+  errorOnInput?: boolean;
+};
+
+type handleRegisterSuccessT = {
+  status: 'success';
+  message: string;
+  instruction: 'give-code';
+  userId: string;
+};
+
+export type handleRegisterResT = handleRegisterErrorT | handleRegisterSuccessT;

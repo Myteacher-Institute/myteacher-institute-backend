@@ -8,7 +8,12 @@ import {
   HandleGetAccessTokenResponseT,
   handleResetPasswordWithCodeResT,
   handleSendResetInstructionsResT,
+  handleRegisterResT,
 } from '../types/auth.types';
+
+interface CheckUserExistsResponse {
+  userExists: boolean;
+}
 
 import {
   verifyOtp,
@@ -19,10 +24,21 @@ import {
   completeOnboarding,
   sendResetInstructions,
   resetPasswordWithCode,
+  checkUserExists,
+  registerUser,
+  resendOtp,
 } from '../services';
 
+export const handleCheckUserExists = async (
+  req: Request<any, any, { email: string }>,
+  res: Response<CheckUserExistsResponse>
+) => {
+  const { status, body } = await checkUserExists(req);
+  return res.status(status).json(body);
+};
+
 export const handleAuthenticateUser = async (
-  req: Request<any, any, { email: string, role: "user" | "instructor" }>,
+  req: Request<any, any, { email: string, password: string }>,
   res: Response<handleAuthenticateResT>
 ) => {
   const { status, body } = await authenticateUser(req);
@@ -95,4 +111,20 @@ export const handleResetPasswordWithCode = async (
 
 export const handleGoogleCallback = async (req: Request<any, any, any, any>, res: Response) => {
   await googleCallback(req, res);
+};
+
+export const handleRegisterUser = async (
+  req: Request<any, any, { email: string; password: string; name: string; phone: string }>,
+  res: Response<handleRegisterResT>
+) => {
+  const { status, body } = await registerUser(req);
+  return res.status(status).json(body);
+};
+
+export const handleResendOtp = async (
+  req: Request<any, any, { email: string }>,
+  res: Response<{ status: 'success' | 'failed'; message: string }>
+) => {
+  const { status, body } = await resendOtp(req);
+  return res.status(status).json(body);
 };

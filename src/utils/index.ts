@@ -1,13 +1,10 @@
 import jwt from 'jsonwebtoken';
 import { Resend } from 'resend';
-import config from '@/config/env';
+import config from '../config/env';
 import { Request } from 'express';
 import IPLocate from 'node-iplocate';
-import { handleVerifyPasswordResT } from '@/types/auth.types';
+import { handleVerifyPasswordResT } from '../types/auth.types';
 
-import { Resend } from "resend";
-import config from "../config/env";
-import jwt from "jsonwebtoken";
 
 export const logger = {
   info: (message: string): void => console.log(`ℹ️  ${message}`),
@@ -111,8 +108,6 @@ export const getHandleVerifyOtpSuccessMessage = (useCase: string): string => {
   }
   return 'Verification successful!';
 };
-
-export const resend = new Resend(process.env.RESEND_API_KEY);
 
 
 type generateJWTCookieT = {
