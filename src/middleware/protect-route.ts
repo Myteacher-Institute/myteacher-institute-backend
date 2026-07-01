@@ -9,7 +9,7 @@ export type ProtectMiddleWareErrorT =
   | { message: string; type: 'invalid-auth' }
   | { message: string; type: 'server-error' };
 
-const ProtectMiddleWare = async (
+export const ProtectMiddleWare = async (
   req: Request,
   res: Response<ProtectMiddleWareErrorT>,
   next: NextFunction
@@ -80,4 +80,3 @@ const ProtectMiddleWare = async (
   }
 };
 
-export default ProtectMiddleWare;

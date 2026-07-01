@@ -1,10 +1,10 @@
 import bcrypt from 'bcryptjs';
 import { Request } from 'express';
 
-import { User } from '@/models';
+import { User } from '../models';
 import { generateSession } from './session.service';
-import logger, { generateJWT, getClientIp } from '@/utils';
-import { handleCompleteOnboardingResT } from '@/types/auth.types';
+import logger, { generateJWT, getClientIp } from '../utils';
+import { handleCompleteOnboardingResT } from '../types/auth.types';
 
 export const completeOnboarding = async (
     req: Request<any, any, { name: string; userId: string; password: string }>

@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken';
 import { Request } from 'express';
 
-import config from '@/config/env';
-import logger, { generateJWT } from '@/utils';
-import { HandleGetAccessTokenResponseT } from '@/types/auth.types';
+import config from '../config/env';
+import logger, { generateJWT } from '../utils';
+import { HandleGetAccessTokenResponseT } from '../types/auth.types';
 
 export const getAccessToken = (
     req: Request

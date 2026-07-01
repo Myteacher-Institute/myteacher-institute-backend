@@ -1,9 +1,10 @@
 import jwt from 'jsonwebtoken';
 import { Resend } from 'resend';
-import config from '@/config/env';
+import config from '../config/env';
 import { Request } from 'express';
 import IPLocate from 'node-iplocate';
-import { handleVerifyPasswordResT } from '@/types/auth.types';
+import { handleVerifyPasswordResT } from '../types/auth.types';
+
 
 export const logger = {
   info: (message: string): void => console.log(`ℹ️  ${message}`),
@@ -107,5 +108,36 @@ export const getHandleVerifyOtpSuccessMessage = (useCase: string): string => {
   }
   return 'Verification successful!';
 };
+
+
+type generateJWTCookieT = {
+    userId: string,
+    type: "refresh" | "access"
+}
+
+export const generateJWTCookie = (args: generateJWTCookieT): string | "error" => {
+    try {
+        const { type, userId } = args
+
+        if (type === "access") {
+            const secret = config["JWT_ACCESS_TOKEN_SECRET"]
+            const token = jwt.sign({ userId }, secret, { expiresIn: '15m' });
+            return token;
+        }
+
+        const secret = config["JWT_REFRESH_TOKEN_SECRET"]
+        const token = jwt.sign({ userId }, secret, { expiresIn: '7d' });
+        return token;
+
+
+    } catch (error) {
+        logger.error(`generateJWTCookie error -> ${(error as Error)?.message ?? error}`);
+        return "error"
+    }
+}
+
+
+
+
 
 export default logger;

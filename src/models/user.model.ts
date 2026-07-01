@@ -1,27 +1,32 @@
-import { IUser } from '@/types';
 import mongoose from 'mongoose';
+import { IUser } from '../types';
 
-const userSchema = new mongoose.Schema<IUser>(
-  {
+const userSchema = new mongoose.Schema<IUser>({
     password: {
-      type: String,
-      minlength: 6,
+        type: String,
+        required: true,
+        minlength: 6
     },
     email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
+        type: String,
+        required: true,
+        unique: true,
+        lowercase: true
     },
     name: {
-      type: String,
+        type: String,
+        required: true
     },
     phone: {
-      type: String,
+        type: String
     },
     isEmailVerified: {
-      type: Boolean,
-      default: false,
+        type: Boolean,
+        default: false
+    },
+    coursesBought: {
+        type: [mongoose.Schema.Types.ObjectId],
+        ref: 'course'
     },
     hasOnboarded: {
       type: Boolean,
@@ -31,11 +36,9 @@ const userSchema = new mongoose.Schema<IUser>(
       type: String,
       enum: ["user", "instructor", "admin"]
     }
-  },
-  {
-    timestamps: true,
-  }
-);
+}, {
+    timestamps: true
+});
 
 const User = mongoose.model('user', userSchema);
 

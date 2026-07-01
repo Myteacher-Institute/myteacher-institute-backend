@@ -1,7 +1,7 @@
 import { UAParser } from 'ua-parser-js';
 
-import { generateJWT, IPLocateClient } from '@/utils';
-import { ClientInfo, DeviceType, GeoInfo, Session } from '@/models/session.model';
+import { generateJWT, IPLocateClient } from '../utils';
+import { ClientInfo, DeviceType, GeoInfo, Session } from '../models/session.model';
 
 type GenerateSessionPayload = {
   ip: string;

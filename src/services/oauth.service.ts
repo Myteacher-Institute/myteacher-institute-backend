@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 
-import { User } from '@/models';
-import config from '@/config/env';
-import logger, { getClientIp } from '@/utils';
+import { User } from '../models';
+import config from '../config/env';
+import logger, { getClientIp } from '../utils';
 import { generateSession } from './session.service';
 
 type GoogleCallbackQuery = {
@@ -84,7 +84,7 @@ export const googleCallback = async (
             body: params.toString(),
         });
 
-        const tokenData: GoogleTokenResponse = await tokenDataRes.json();
+        const tokenData = await tokenDataRes.json() as GoogleTokenResponse;
 
         if (tokenData.error) {
             res.redirect(`${FRONTEND_OAUTH_URL}?status=token_error`);
@@ -95,7 +95,7 @@ export const googleCallback = async (
             headers: { Authorization: `Bearer ${tokenData.access_token}` },
         });
 
-        const userInfo: GoogleUserInfo = await userInfoResponse.json();
+        const userInfo = await userInfoResponse.json() as GoogleUserInfo;
 
         const ip = getClientIp(req);
         const userAgent = req.headers['user-agent'] ?? '';

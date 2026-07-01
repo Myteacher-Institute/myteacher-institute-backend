@@ -2,16 +2,16 @@ import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import { Request } from 'express';
 
-import { User, Otp, Session } from '@/models';
+import { User, Otp, Session } from '../models';
 import { generateSession } from './session.service';
 import { sendResetPasswordEmail } from './email.service';
-import logger, { generateJWT, getClientIp, getHandleVerifyOtpSuccessMessage } from '@/utils';
+import logger, { generateJWT, getClientIp, getHandleVerifyOtpSuccessMessage } from '../utils';
 
 import {
   handleVerifyOtpResT,
   handleSendResetInstructionsResT,
   handleResetPasswordWithCodeResT,
-} from '@/types/auth.types';
+} from '../types/auth.types';
 
 export const verifyOtp = async (
   req: Request<any, any, { otp: string; email?: string }>
@@ -69,6 +69,21 @@ export const verifyOtp = async (
       return {
         status: 200,
         body: { status: 'success', message: getHandleVerifyOtpSuccessMessage(findOtp.useCase), authUser: findUser, accessToken: access_code as string },
+      };
+    }
+
+    if (findOtp.useCase === 'login') {
+      const sessionRes = await generateSession({ ip, userAgent, userId: findUser._id.toString() });
+
+      if (!sessionRes.isSuccessful) {
+        return { status: 400, body: { status: 'failed', message: sessionRes.reason } };
+      }
+
+      const access_code = generateJWT({ sessionId: sessionRes.sessionId, type: 'access', userId: findUser._id.toString() });
+
+      return {
+        status: 200,
+        body: { status: 'success', message: 'Login successful', authUser: findUser, accessToken: access_code as string },
       };
     }
 

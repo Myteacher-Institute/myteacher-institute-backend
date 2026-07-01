@@ -9,7 +9,6 @@ type VerifyAccountEmailT = {
 const VerifyAccountEmail = ({
   previewText,
   logo_url,
-
   code = '65664646',
 }: VerifyAccountEmailT) => {
   const codeDigits = code.split('');
@@ -100,7 +99,6 @@ VerifyAccountEmail.PreviewProps = {
   previewText: 'Verify your account with your 6-digit code',
   logo_url:
     'https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/light/notion.png',
-  username: 'John Doe',
   code: '123456',
 } as VerifyAccountEmailT;
 
