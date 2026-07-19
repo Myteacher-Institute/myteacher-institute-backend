@@ -133,3 +133,6 @@ export * from './session.service';
 export * from './password.service';
 export * from './onboarding.service';
 export * from './admin.services';
+export * from './notification.service';
+export * from './user-status.service';
+export { ensureOnlineStatusFields } from './user-status.service';

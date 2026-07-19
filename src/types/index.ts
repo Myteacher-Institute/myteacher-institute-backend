@@ -11,10 +11,13 @@ export interface IUser extends mongoose.Document {
     isEmailVerified: boolean;
     hasOnboarded: boolean;
     coursesBought: mongoose.Schema.Types.ObjectId[];
-    role: "user" | "instructor" | "admin"
+    role: "user" | "instructor" | "admin";
+    isOnline?: boolean;
+    lastSeen?: Date;
+    socketId?: string;
 }
 
-import { ICourse, AddCourseReqBody, AddCourseResT, FetchCoursesByUserReqBody, FetchCoursesByUserResT, FetchAllCoursesResT } from './course.type';
+import { ICourse, AddCourseReqBody, AddCourseResT, FetchCoursesByUserReqBody, FetchCoursesByUserResT, FetchAllCoursesResT, EditCourseReqBody, EditCourseResT, FetchCourseByIdResT } from './course.type';
 
 import { IAdmin, AddAdminReqBody, AddAdminResT, AdminLoginReqBody, AdminLoginResT, VerifyAdminOtpReqBody, VerifyAdminOtpResT, ResendAdminOtpReqBody, ResendAdminOtpResT, SendAdminResetCodeReqBody, SendAdminResetCodeResT, ResetAdminPasswordReqBody, ResetAdminPasswordResT } from './admin.type';
 
@@ -52,6 +55,9 @@ export type {
     FetchCoursesByUserReqBody,
     FetchCoursesByUserResT,
     FetchAllCoursesResT,
+    EditCourseReqBody,
+    EditCourseResT,
+    FetchCourseByIdResT,
     IAdmin,
     AddAdminReqBody,
     AddAdminResT,

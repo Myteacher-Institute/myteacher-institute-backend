@@ -22,7 +22,14 @@ export const loadClientSecrets = () => {
 // Create OAuth2 client
 export const createOAuth2Client = (google: any) => {
     const credentials = loadClientSecrets();
-    const { client_secret, client_id, redirect_uris } = credentials.installed;
+    // Handle both 'installed' (desktop/mobile) and 'web' (web apps) credential formats
+    const clientConfig = credentials.installed || credentials.web;
+    
+    if (!clientConfig) {
+        throw new Error("Invalid client secrets file: missing 'installed' or 'web' key");
+    }
+
+    const { client_secret, client_id, redirect_uris } = clientConfig;
     return new google.auth.OAuth2(
         client_id,
         client_secret,

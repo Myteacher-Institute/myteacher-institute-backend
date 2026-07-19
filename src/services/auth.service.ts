@@ -1,10 +1,11 @@
 import { Request } from 'express';
 
-import logger from '../utils';
+import logger, { sanitizeString } from '../utils';
 import User  from '../models/user.model';
 import { sendVerificationEmail } from './email.service';
 import { handleAuthenticateResT, handleRegisterResT } from '../types/auth.types';
 import bcrypt from 'bcryptjs';
+import { createNotification } from './notification.service';
 
 export const checkUserExists = async (
   req: Request<any, any, { email: string }>
@@ -12,16 +13,18 @@ export const checkUserExists = async (
   try {
     const { email } = req.body || {};
 
-    if (!email) {
+    // #10/#22 sanitize — reject non-string (MongoDB operator injection)
+    const safeEmail = sanitizeString(email);
+    if (!safeEmail) {
       return { status: 400, body: { userExists: false } };
     }
 
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(safeEmail)) {
       return { status: 400, body: { userExists: false } };
     }
 
-    const findUser = await User.findOne({ email });
+    const findUser = await User.findOne({ email: safeEmail });
 
     return {
       status: 200,
@@ -39,20 +42,23 @@ export const authenticateUser = async (
   try {
     const { email, password } = req.body || {};
 
-    if (!email) {
+    // #10/#22 sanitize
+    const safeEmail = sanitizeString(email);
+    const safePassword = sanitizeString(password);
+
+    if (!safeEmail) {
       return { status: 400, body: { errorOnInput: true, status: 'failed', message: 'Email is required' } };
     }
-
-    if (!password) {
+    if (!safePassword) {
       return { status: 400, body: { errorOnInput: true, status: 'failed', message: 'Password is required' } };
     }
 
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(safeEmail)) {
       return { status: 400, body: { errorOnInput: true, status: 'failed', message: 'Invalid email format' } };
     }
 
-    const findUser = await User.findOne({ email });
+    const findUser = await User.findOne({ email: safeEmail });
 
     if (!findUser) {
       return { status: 401, body: { errorOnInput: true, status: 'failed', message: 'Invalid credentials' } };
@@ -62,7 +68,7 @@ export const authenticateUser = async (
       return { status: 400, body: { errorOnInput: true, status: 'failed', message: 'Please complete your account setup first' } };
     }
 
-    const isPasswordValid = await bcrypt.compare(password, findUser.password);
+    const isPasswordValid = await bcrypt.compare(safePassword, findUser.password);
 
     if (!isPasswordValid) {
       return { status: 401, body: { errorOnInput: true, status: 'failed', message: 'Invalid credentials' } };
@@ -136,51 +142,56 @@ export const registerUser = async (
   try {
     const { email, password, name, phone } = req.body || {};
 
-    if (!email) {
+    // #10/#22 sanitize all string inputs
+    const safeEmail = sanitizeString(email);
+    const safePassword = sanitizeString(password);
+    const safeName = sanitizeString(name);
+    const safePhone = sanitizeString(phone);
+
+    if (!safeEmail) {
       return { status: 400, body: { status: 'failed', message: 'Email is required', errorOnInput: true } };
     }
-
-    if (!password) {
+    if (!safePassword) {
       return { status: 400, body: { status: 'failed', message: 'Password is required', errorOnInput: true } };
     }
-
-    if (!name) {
+    if (!safeName) {
       return { status: 400, body: { status: 'failed', message: 'Name is required', errorOnInput: true } };
     }
-
-    if (!phone) {
+    if (!safePhone) {
       return { status: 400, body: { status: 'failed', message: 'Phone Number is required', errorOnInput: true } };
     }
 
-    if (password.length < 6) {
-      return { status: 400, body: { status: 'failed', message: 'Password must be at least 6 characters', errorOnInput: true } };
+    const passwordReg = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordReg.test(safePassword)) {
+      return { status: 400, body: { status: 'failed', message: 'Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, one number and one special character', errorOnInput: true } };
     }
 
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(safeEmail)) {
       return { status: 400, body: { status: 'failed', message: 'Invalid email format', errorOnInput: true } };
     }
 
-    const phoneRegex = /^[0-9]{10}$/;
-    if (!phoneRegex.test(phone)) {
+    // #15 phone — accept 7-15 digits, optional leading +, covers international numbers
+    const phoneRegex = /^\+?[0-9]{7,15}$/;
+    if (!phoneRegex.test(safePhone)) {
       return { status: 400, body: { status: 'failed', message: 'Invalid phone number format', errorOnInput: true } };
     }
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: safeEmail });
     if (existingUser) {
       return { status: 409, body: { status: 'failed', message: 'User with this email already exists', errorOnInput: true } };
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(safePassword, 10);
 
     const newUser = await User.create({
-      email,
+      email: safeEmail,
       password: hashedPassword,
-      name,
-      phone,
+      name: safeName,
+      phone: safePhone,
       isEmailVerified: false,
       hasOnboarded: false,
-      role: 'user',
+      role: 'user', // #18 role always hardcoded — never taken from request body
     });
 
     const emailStatus = await sendVerificationEmail(newUser._id.toString(), newUser.email, 'new-account');

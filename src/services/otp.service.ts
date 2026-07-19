@@ -1,11 +1,10 @@
 import bcrypt from 'bcryptjs';
-import mongoose from 'mongoose';
 import { Request } from 'express';
 
 import { User, Otp, Session } from '../models';
 import { generateSession } from './session.service';
 import { sendResetPasswordEmail } from './email.service';
-import logger, { generateJWT, getClientIp, getHandleVerifyOtpSuccessMessage } from '../utils';
+import logger, { generateJWT, getClientIp, getHandleVerifyOtpSuccessMessage, sanitizeString } from '../utils';
 
 import {
   handleVerifyOtpResT,
@@ -19,21 +18,26 @@ export const verifyOtp = async (
   try {
     const { otp } = req.body || {};
 
-    if (!otp || typeof otp !== 'string') {
+    const safeOtp = sanitizeString(otp);
+    if (!safeOtp || typeof safeOtp !== 'string') {
       return { status: 400, body: { status: 'failed', message: 'OTP is required and must be a string' } };
     }
 
-    if (otp.length !== 6) {
+    if (safeOtp.length !== 6 || !/^\d{6}$/.test(safeOtp)) {
       return { status: 400, body: { status: 'failed', message: 'OTP must be exactly 6 digits' } };
     }
 
-    const findOtp = await Otp.findOne({ otp });
+    // #16 Atomic find-and-delete to prevent race condition / OTP reuse
+    const findOtp = await Otp.findOneAndDelete({
+      otp: safeOtp,
+      accountType: 'user',
+      isUsed: false,
+      expiresAt: { $gt: new Date() }, // #25 expiry enforced at DB query level
+    });
 
     if (!findOtp) {
       return { status: 400, body: { status: 'failed', message: 'The verification code you entered is invalid or has expired. Please request a new one.' } };
     }
-
-    await findOtp.deleteOne();
 
     const findUser = await User.findById(findOtp.accountToVerifyId);
 
@@ -68,11 +72,30 @@ export const verifyOtp = async (
 
       return {
         status: 200,
-        body: { status: 'success', message: getHandleVerifyOtpSuccessMessage(findOtp.useCase), authUser: findUser, accessToken: access_code as string },
+        body: {
+          status: 'success',
+          message: getHandleVerifyOtpSuccessMessage(findOtp.useCase),
+          authUser: findUser,
+          accessToken: access_code as string,
+          cookie: {
+            name: process.env.REFRESH_TOKEN_COOKIE_NAME || 'refresh_token',
+            value: sessionRes.token
+          }
+        },
       };
     }
 
     if (findOtp.useCase === 'login') {
+      // Ensure online status fields exist
+      const { ensureOnlineStatusFields } = await import('./user-status.service');
+      await ensureOnlineStatusFields(findUser._id.toString(), 'user');
+      
+      // Set user as online
+      await User.updateOne(
+        { _id: findUser._id },
+        { $set: { isOnline: true, lastSeen: new Date() } }
+      );
+      
       const sessionRes = await generateSession({ ip, userAgent, userId: findUser._id.toString() });
 
       if (!sessionRes.isSuccessful) {
@@ -83,7 +106,16 @@ export const verifyOtp = async (
 
       return {
         status: 200,
-        body: { status: 'success', message: 'Login successful', authUser: findUser, accessToken: access_code as string },
+        body: {
+          status: 'success',
+          message: 'Login successful',
+          authUser: findUser,
+          accessToken: access_code as string,
+          cookie: {
+            name: process.env.REFRESH_TOKEN_COOKIE_NAME || 'refresh_token',
+            value: sessionRes.token
+          }
+        },
       };
     }
 
@@ -100,65 +132,56 @@ export const sendResetInstructions = async (
   try {
     const { email } = req.body || {};
 
-    if (!email) {
+    const safeEmail = sanitizeString(email);
+    if (!safeEmail) {
       return { status: 400, body: { status: 'failed', message: 'Email is required' } };
     }
 
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(safeEmail)) {
       return { status: 400, body: { status: 'failed', message: 'Invalid email format' } };
     }
 
-    const findUser = await User.findOne({ email });
-
+    const findUser = await User.findOne({ email: safeEmail });
     if (!findUser) {
-      return { status: 400, body: { status: 'failed', message: 'User account not found. Please contact support.' } };
+      // Don't reveal whether email exists — always return success
+      return { status: 200, body: { status: 'success', message: 'If that email exists, reset instructions have been sent.' } };
     }
 
-    const findOtp = await Otp.findOne({ userId: findUser._id, useCase: 'reset-password', isUsed: false });
+    // #20 Check rate limit first
+    const existingOtp = await Otp.findOne({
+      accountToVerifyId: findUser._id,
+      useCase: 'reset-password',
+      isUsed: false,
+      expiresAt: { $gt: new Date() },
+    });
 
-    if (findOtp) {
-      if (findOtp.sendAttempts > 4) {
-        return { status: 429, body: { status: 'failed', message: 'Too many reset instruction requests. Please wait 15 minutes to request another.' } };
-      }
-
-      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const resetId = new mongoose.Types.ObjectId();
-
-      await Otp.updateOne(
-        { _id: findOtp._id },
-        { $set: { otp: otpCode, accountToVerifyId: resetId, expiresAt: new Date(Date.now() + 10 * 60 * 1000), sendAttempts: findOtp.sendAttempts + 1 } }
-      );
-
-      const resetLink = `${process.env.BACKEND_BASE_URL || 'http://localhost:3000'}/api/auth/therest?token=${otpCode}&id=${encodeURIComponent(resetId.toString())}`;
-      const emailResult = await sendResetPasswordEmail(email, resetLink);
-
-      if (emailResult === 'error') {
-        return { status: 500, body: { status: 'failed', message: 'Failed to send reset instructions. Please try again.' } };
-      }
+    if (existingOtp && existingOtp.sendAttempts >= 5) {
+      return { status: 429, body: { status: 'failed', message: 'Too many reset instruction requests. Please wait 15 minutes to request another.' } };
     }
+
+    // #20 Delete ALL existing reset OTPs for this user BEFORE creating a new one
+    await Otp.deleteMany({ accountToVerifyId: findUser._id, useCase: 'reset-password' });
 
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-
     await Otp.create({
       otp: otpCode,
       accountToVerifyId: findUser._id,
+      accountType: 'user',
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       isUsed: false,
       useCase: 'reset-password',
-      sendAttempts: 1,
+      sendAttempts: (existingOtp?.sendAttempts ?? 0) + 1,
     });
 
-    await Otp.deleteMany({ userId: findUser._id, useCase: 'reset-password', isUsed: false });
-
     const resetLink = `${process.env.FRONTEND_BASE_URL || 'http://localhost:3000'}/auth/change-password/otp?token=${otpCode}`;
-    const emailResult = await sendResetPasswordEmail(email, resetLink);
+    const emailResult = await sendResetPasswordEmail(safeEmail, resetLink);
 
     if (emailResult === 'error') {
       return { status: 500, body: { status: 'failed', message: 'Failed to send reset instructions. Please try again.' } };
     }
 
-    return { status: 200, body: { status: 'success', message: 'Reset instructions sent to your email. Please check your inbox.' } };
+    return { status: 200, body: { status: 'success', message: 'If that email exists, reset instructions have been sent.' } };
   } catch (error) {
     logger.error(`Error on @sendResetInstructions: ${(error as Error)?.message ?? error}`);
     return { status: 500, body: { status: 'failed', message: 'Internal server error' } };
@@ -171,38 +194,39 @@ export const resetPasswordWithCode = async (
   try {
     const { code, password, confirmPassword, logoutAllDevices } = req.body || {};
 
-    if (!code) {
+    const safeCode = sanitizeString(code);
+    const safePassword = sanitizeString(password);
+    const safeConfirm = sanitizeString(confirmPassword);
+
+    if (!safeCode) {
       return { status: 400, body: { status: 'failed', message: 'Reset code is required' } };
     }
-
-    if (!password) {
+    if (!safePassword) {
       return { status: 400, body: { status: 'failed', message: 'Password is required' } };
     }
-
-    if (!confirmPassword) {
+    if (!safeConfirm) {
       return { status: 400, body: { status: 'failed', message: 'Password confirmation is required' } };
     }
-
-    if (password.length < 6) {
+    if (safePassword.length < 6) {
       return { status: 400, body: { status: 'failed', message: 'Password must be at least 6 characters long' } };
     }
-
-    if (password !== confirmPassword) {
+    if (safePassword !== safeConfirm) {
       return { status: 400, body: { status: 'failed', message: 'Passwords do not match' } };
     }
 
-    const otpRecord = await Otp.findOne({ otp: code, isUsed: false, useCase: 'reset-password' });
+    // #16/#20 Atomic find-and-delete prevents race condition and reuse
+    const otpRecord = await Otp.findOneAndDelete({
+      otp: safeCode,
+      isUsed: false,
+      useCase: 'reset-password',
+      expiresAt: { $gt: new Date() }, // #25 enforce expiry at DB level
+    });
 
     if (!otpRecord) {
       return { status: 400, body: { status: 'failed', message: 'Invalid or expired reset code' } };
     }
 
-    if (otpRecord.expiresAt < new Date()) {
-      return { status: 400, body: { status: 'failed', message: 'Reset code has expired' } };
-    }
-
     const user = await User.findById(otpRecord.accountToVerifyId);
-
     if (!user) {
       return { status: 404, body: { status: 'failed', message: 'User not found' } };
     }
@@ -211,10 +235,8 @@ export const resetPasswordWithCode = async (
       return { status: 403, body: { status: 'failed', message: 'This feature is not available for your account. Please complete account setup first.' } };
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
+    const hashedPassword = await bcrypt.hash(safePassword, 10);
     await User.updateOne({ _id: user._id }, { $set: { password: hashedPassword } });
-    await Otp.deleteOne({ _id: otpRecord._id });
 
     if (logoutAllDevices) {
       await Session.deleteMany({ userId: user._id });

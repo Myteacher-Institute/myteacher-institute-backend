@@ -5,7 +5,8 @@ import { generateJWTCookie } from "../utils";
 import config from "../config/env";
 import { AddAdminReqBody, AddAdminResT, AdminLoginReqBody, AdminLoginResT, VerifyAdminOtpReqBody, VerifyAdminOtpResT, ResendAdminOtpReqBody, ResendAdminOtpResT, SendAdminResetCodeReqBody, SendAdminResetCodeResT, ResetAdminPasswordReqBody, ResetAdminPasswordResT } from "../types";
 import { adminLoginValidation, verifyAdminOtp, resendAdminOtp, sendAdminResetCode, resetAdminPassword } from "../services/admin.services";
-import { sendVerificationEmail } from "../services/email.service";
+import { sendVerificationEmail, sendAdminWelcomeEmail } from "../services/email.service";
+import { createNotification } from "../services/notification.service";
 
 const handleAddAdmin = async (req: Request<AddAdminReqBody>, res: Response<AddAdminResT>) => {
     try {
@@ -27,14 +28,33 @@ const handleAddAdmin = async (req: Request<AddAdminReqBody>, res: Response<AddAd
             });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-
         const newAdmin = await Admin.create({
             name,
             email,
-            password: hashedPassword,
+            password: await bcrypt.hash(password, 10),
             isAdmin: true
         });
+
+        await sendAdminWelcomeEmail({
+            name: newAdmin.name,
+            email: newAdmin.email,
+            password: password
+        });
+
+        // Send notification to the new admin
+        try {
+            await createNotification({
+                recipientId: newAdmin._id.toString(),
+                recipientType: 'admin',
+                title: 'Welcome to Myteacher Institute',
+                message: 'Your admin account has been created successfully. You can now manage the platform.',
+                type: 'success',
+                relatedId: newAdmin._id.toString(),
+                relatedType: 'admin'
+            });
+        } catch (error) {
+            console.error('Failed to create notification:', error);
+        }
 
         return res.status(201).json({
             status: "success",
@@ -74,7 +94,7 @@ const handleAdminLogin = async (req: Request<AdminLoginReqBody>, res: Response<A
         }
         const userId = admin._id.toString();
 
-        const emailResult = await sendVerificationEmail(userId, admin.email, 'login');
+        const emailResult = await sendVerificationEmail(userId, admin.email, 'login', 'admin');
 
         if (emailResult === 'rate-limited') {
             return res.status(429).json({
@@ -119,6 +139,20 @@ const handleVerifyAdminOtp = async (req: Request<VerifyAdminOtpReqBody>, res: Re
                 status: "failed",
                 message: result.message
             });
+        }
+
+        console.log('Admin Login Debug:');
+        console.log('- Cookie to set:', result.cookie);
+        console.log('- Access Token:', result.accessToken);
+
+        if (result.cookie) {
+            res.cookie(result.cookie.name, result.cookie.value, {
+                maxAge: 30 * 24 * 60 * 60 * 1000,
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            });
+            console.log('- Cookie set successfully');
         }
 
         return res.status(200).json({

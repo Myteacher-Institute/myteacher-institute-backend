@@ -4,7 +4,7 @@ import { loadOpenApiSpec } from './docs-loader';
 import logger from '../utils';
 
 export const configureScalarDocs = (app: Express): void => {
-  const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL ?? 'http://localhost:3000';
+  const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL ?? 'http://localhost:4000';
   const NODE_ENV = process.env.NODE_ENV ?? 'production';
   const serverDescription = NODE_ENV.includes('prod') ? 'Production Server' : 'Development Server';
 

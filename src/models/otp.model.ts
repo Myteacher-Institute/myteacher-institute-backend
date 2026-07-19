@@ -7,14 +7,20 @@ interface IOtp extends Document {
   isUsed: boolean;
   sendAttempts: number;
   useCase: 'new-account' | 'onboarded-account' | 'reset-password' | 'login';
+  accountType?: 'user' | 'admin' | 'instructor';
 }
 
 const otpSchema = new Schema<IOtp>(
   {
     accountToVerifyId: {
       type: Schema.Types.ObjectId,
-      ref: 'user',
       required: true,
+      // No specific ref - can be user, admin, or instructor
+    },
+    accountType: {
+      type: String,
+      enum: ['user', 'admin', 'instructor'],
+      default: 'user',
     },
     sendAttempts: {
       type: Number,
@@ -44,8 +50,8 @@ const otpSchema = new Schema<IOtp>(
   }
 );
 
-// Index for cleanup of expired OTPs
-otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+// Index for cleanup of expired OTPs - cleanup 1 hour after expiry instead of immediately
+otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 3600 });
 
 const Otp = mongoose.model<IOtp>('otp', otpSchema);
 

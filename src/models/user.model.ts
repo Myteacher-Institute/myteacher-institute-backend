@@ -35,6 +35,16 @@ const userSchema = new mongoose.Schema<IUser>({
     role: {
       type: String,
       enum: ["user", "instructor", "admin"]
+    },
+    isOnline: {
+      type: Boolean,
+      default: false
+    },
+    lastSeen: {
+      type: Date
+    },
+    socketId: {
+      type: String
     }
 }, {
     timestamps: true

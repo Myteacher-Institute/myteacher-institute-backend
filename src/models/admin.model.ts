@@ -24,6 +24,16 @@ const adminSchema = new Schema<IAdmin>({
     },
     resetPasswordExpiry: {
         type: Date
+    },
+    isOnline: {
+        type: Boolean,
+        default: false
+    },
+    lastSeen: {
+        type: Date
+    },
+    socketId: {
+        type: String
     }
 }, {
     timestamps: true

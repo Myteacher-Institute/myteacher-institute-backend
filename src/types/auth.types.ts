@@ -36,6 +36,10 @@ type handleVerifyPasswordTrustedSuccessT = {
 type handleVerifyOtpErrorT = {
   status: 'failed';
   message: string;
+  cookie?: {
+    name: string;
+    value: string;
+  };
 };
 
 type handleVerifyOtpOnboardingSuccessT = {
@@ -43,6 +47,10 @@ type handleVerifyOtpOnboardingSuccessT = {
   message: string;
   nextStep: 'onboarding';
   userId: string;
+  cookie?: {
+    name: string;
+    value: string;
+  };
 };
 
 type handleVerifySuccessT = {
@@ -50,6 +58,10 @@ type handleVerifySuccessT = {
   message: string;
   authUser: IUser;
   accessToken: string;
+  cookie?: {
+    name: string;
+    value: string;
+  };
 };
 
 type handleCompleteOnboardingSuccessT = {
@@ -57,11 +69,19 @@ type handleCompleteOnboardingSuccessT = {
   message: string;
   authUser: IUser;
   accessToken: string;
+  cookie?: {
+    name: string;
+    value: string;
+  };
 };
 
 type handleCompleteOnboardingErrorT = {
   status: 'failed';
   message: string;
+  cookie?: {
+    name: string;
+    value: string;
+  };
 };
 
 export type handleVerifyOtpResT = handleVerifyOtpErrorT | handleVerifyOtpOnboardingSuccessT | handleVerifySuccessT;

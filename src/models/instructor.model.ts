@@ -23,6 +23,10 @@ const instructorSchema = new Schema<IInstructor>({
         type: Schema.Types.ObjectId, 
         ref: "Course" 
     }],
+    specialization: { 
+        type: String, 
+        required: true 
+    },
     password: { 
         type: String, 
         required: true 
@@ -35,6 +39,21 @@ const instructorSchema = new Schema<IInstructor>({
         accessToken: { type: String, default: '' },
         refreshToken: { type: String, default: '' },
         expiryDate: { type: Number, default: 0 }
+    },
+    driveTokens: {
+        accessToken: { type: String, default: '' },
+        refreshToken: { type: String, default: '' },
+        expiryDate: { type: Number, default: 0 }
+    },
+    isOnline: {
+        type: Boolean,
+        default: false
+    },
+    lastSeen: {
+        type: Date
+    },
+    socketId: {
+        type: String
     }
 }, {
     timestamps: true

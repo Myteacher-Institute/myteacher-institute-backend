@@ -5,3 +5,5 @@ export { default as courseRouter } from './course.routes';
 export { default as paymentRouter } from './payment.routes';
 export { default as youtubeRouter } from './youtube.routes';
 export { default as instructorRouter } from './instructor.routes';
+export { default as notificationRouter } from './notification.routes';
+export { default as driveRouter } from './drive.routes';

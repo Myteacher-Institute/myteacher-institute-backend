@@ -10,26 +10,26 @@ export interface ICourse extends mongoose.Document {
         videoDuration: number;
         isProgrammingVideo: boolean;
         isPreview: boolean;
-        programmingCodes: {
-            code: string;
-            language: string;
-            explanation: string;
-            fileName: string;
-        }[];
-        assets: {
-            name: string;
-            url: string;
-        }[];
-        quizzes: {
-            title: string;
-            questions: {
-                question: string;
-                options: {
-                    option: string;
-                    isCorrect: boolean;
-                }[];
-                correctAnswer: string;
+    }[];
+    programmingCodes: {
+        code: string;
+        language: string;
+        explanation: string;
+        fileName: string;
+    }[];
+    assets: {
+        name: string;
+        url: string;
+    }[];
+    quizzes: {
+        title: string;
+        questions: {
+            question: string;
+            options: {
+                option: string;
+                isCorrect: boolean;
             }[];
+            correctAnswer: string;
         }[];
     }[];
     courseRequirements: string[];
@@ -63,26 +63,26 @@ export type AddCourseReqBody = {
         videoDuration: number;
         isProgrammingVideo: boolean;
         isPreview: boolean;
-        programmingCodes: Array<{
-            code: string;
-            language: string;
-            explanation: string;
-            fileName: string;
-        }>;
-        assets: Array<{
-            name: string;
-            url: string;
-        }>;
-        quizzes: Array<{
-            title: string;
-            questions: Array<{
-                question: string;
-                options: Array<{
-                    option: string;
-                    isCorrect: boolean;
-                }>;
-                correctAnswer: string;
+    }>;
+    programmingCodes: Array<{
+        code: string;
+        language: string;
+        explanation: string;
+        fileName: string;
+    }>;
+    assets: Array<{
+        name: string;
+        url: string;
+    }>;
+    quizzes: Array<{
+        title: string;
+        questions: Array<{
+            question: string;
+            options: Array<{
+                option: string;
+                isCorrect: boolean;
             }>;
+            correctAnswer: string;
         }>;
     }>;
     courseRequirements: string[];
@@ -111,4 +111,54 @@ export type FetchAllCoursesResT = {
     status: "success" | "failed";
     message: string;
     courses?: Partial<ICourse>[];
+}
+
+export type EditCourseReqBody = {
+    courseName?: string;
+    description?: string;
+    courseVideos?: Array<{
+        videoUrl: string;
+        videoTitle: string;
+        videoDescription: string;
+        videoDuration: number;
+        isProgrammingVideo: boolean;
+        isPreview: boolean;
+    }>;
+    programmingCodes?: Array<{
+        code: string;
+        language: string;
+        explanation: string;
+        fileName: string;
+    }>;
+    assets?: Array<{
+        name: string;
+        url: string;
+    }>;
+    quizzes?: Array<{
+        title: string;
+        questions: Array<{
+            question: string;
+            options: Array<{
+                option: string;
+                isCorrect: boolean;
+            }>;
+            correctAnswer: string;
+        }>;
+    }>;
+    courseRequirements?: string[];
+    price?: number;
+    duration?: number;
+    certificate?: string;
+}
+
+export type EditCourseResT = {
+    status: "success" | "failed";
+    message: string;
+    course?: ICourse;
+}
+
+export type FetchCourseByIdResT = {
+    status: "success" | "failed";
+    message: string;
+    course?: ICourse;
 }

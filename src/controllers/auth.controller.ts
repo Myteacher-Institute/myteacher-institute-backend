@@ -28,6 +28,8 @@ import {
   registerUser,
   resendOtp,
 } from '../services';
+import { logoutUser, logoutAllDevices } from '../services/logout.service';
+import config from '../config/env';
 
 export const handleCheckUserExists = async (
   req: Request<any, any, { email: string }>,
@@ -56,7 +58,7 @@ export const handleVerifyPassword = async (
       maxAge: 30 * 24 * 60 * 60 * 1000,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     });
   }
 
@@ -68,6 +70,16 @@ export const handleVerifyOtp = async (
   res: Response<handleVerifyOtpResT>
 ) => {
   const { status, body } = await verifyOtp(req);
+
+  if (body.cookie) {
+    res.cookie(body.cookie.name, body.cookie.value, {
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    });
+  }
+
   return res.status(status).json(body);
 };
 
@@ -82,14 +94,24 @@ export const handleCompleteOnboarding = async (
   }
 
   const { status, body } = await completeOnboarding(req);
+
+  if (body.cookie) {
+    res.cookie(body.cookie.name, body.cookie.value, {
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    });
+  }
+
   return res.status(status).json(body);
 };
 
-export const handleGetAccessToken = (
+export const handleGetAccessToken = async (
   req: Request,
   res: Response<HandleGetAccessTokenResponseT>
 ) => {
-  const { status, body } = getAccessToken(req);
+  const { status, body } = await getAccessToken(req);
   return res.status(status).json(body);
 };
 
@@ -126,5 +148,44 @@ export const handleResendOtp = async (
   res: Response<{ status: 'success' | 'failed'; message: string }>
 ) => {
   const { status, body } = await resendOtp(req);
+  return res.status(status).json(body);
+};
+
+export const handleLogout = async (
+  req: Request,
+  res: Response<{ status: 'success' | 'failed'; message: string }>
+) => {
+  const REFRESH_TOKEN_COOKIE_NAME = config['REFRESH_TOKEN_COOKIE_NAME'] as string;
+  const { status, body } = await logoutUser(req);
+
+  // Always clear the cookie regardless of outcome
+  res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  });
+
+  return res.status(status).json(body);
+};
+
+export const handleLogoutAllDevices = async (
+  req: Request,
+  res: Response<{ status: 'success' | 'failed'; message: string }>
+) => {
+  const REFRESH_TOKEN_COOKIE_NAME = config['REFRESH_TOKEN_COOKIE_NAME'] as string;
+
+  if (!req.userId) {
+    return res.status(401).json({ status: 'failed', message: 'Unauthorized' });
+  }
+
+  const { status, body } = await logoutAllDevices(req.userId);
+
+  // Clear cookie for the current device
+  res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  });
+
   return res.status(status).json(body);
 };

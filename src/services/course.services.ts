@@ -1,5 +1,5 @@
-const addCourseValidation = (payload: { courseName?: string; description?: string; courseVideos?: any[]; courseRequirements?: any[]; price?: number; duration?: number; certificate?: string }, instructorId?: string) => {
-    const { courseName, description, courseVideos, courseRequirements, price, duration, certificate } = payload;
+const addCourseValidation = (payload: { courseName?: string; description?: string; courseVideos?: any[]; courseRequirements?: any[]; price?: number; duration?: number; certificate?: string; programmingCodes?: any[]; assets?: any[]; quizzes?: any[] }, instructorId?: string) => {
+    const { courseName, description, courseVideos, courseRequirements, price, duration, certificate, programmingCodes, assets, quizzes } = payload;
 
     // Validate required fields
     if (!courseName) {
@@ -54,6 +54,30 @@ const addCourseValidation = (payload: { courseName?: string; description?: strin
                 };
             }
         }
+    }
+
+    // Validate programmingCodes structure
+    if (programmingCodes && !Array.isArray(programmingCodes)) {
+        return {
+            isValid: false,
+            message: "programmingCodes must be an array"
+        };
+    }
+
+    // Validate assets structure
+    if (assets && !Array.isArray(assets)) {
+        return {
+            isValid: false,
+            message: "assets must be an array"
+        };
+    }
+
+    // Validate quizzes structure
+    if (quizzes && !Array.isArray(quizzes)) {
+        return {
+            isValid: false,
+            message: "quizzes must be an array"
+        };
     }
 
     // Validate instructor ID

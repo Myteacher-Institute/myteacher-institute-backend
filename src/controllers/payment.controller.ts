@@ -4,6 +4,11 @@ import User from '../models/user.model';
 import { Course } from '../models/course.model';
 import { createPaymentLink, verifyTransaction, generateTransactionReference } from '../services';
 import { CreatePaymentReqBody, CreatePaymentResT, VerifyPaymentResT } from '../types';
+import { sanitizeRedirectUrl } from '../utils';
+
+const ALLOWED_REDIRECT_ORIGINS = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+    : ['http://localhost:3000'];
 
 /**
  * Create a payment link for course purchase
@@ -53,6 +58,18 @@ export const handleCreatePayment = async (req: Request<{}, {}, CreatePaymentReqB
             });
         }
 
+        // #21 Validate redirect URL — reject URLs pointing outside allowed origins
+        const safeRedirectUrl = redirectUrl
+            ? sanitizeRedirectUrl(redirectUrl, ALLOWED_REDIRECT_ORIGINS)
+            : `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/callback`;
+
+        if (redirectUrl && !safeRedirectUrl) {
+            return res.status(400).json({
+                status: 'failed',
+                message: 'Invalid redirect URL'
+            });
+        }
+
         // Generate transaction reference
         const transactionReference = generateTransactionReference(userId, courseId);
 
@@ -72,7 +89,7 @@ export const handleCreatePayment = async (req: Request<{}, {}, CreatePaymentReqB
             amount,
             currency,
             tx_ref: transactionReference,
-            redirect_url: redirectUrl || `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/callback`,
+            redirect_url: safeRedirectUrl!,
             customer: {
                 email: user.email,
                 name: user.name
@@ -122,6 +139,15 @@ export const handleVerifyPayment = async (req: Request<{}, {}, {}, { transaction
             });
         }
 
+        // #17 Ownership check — user can only verify their own transaction
+        const requestingUserId = req.userId;
+        if (requestingUserId && transaction.userId.toString() !== requestingUserId) {
+            return res.status(403).json({
+                status: 'failed',
+                message: 'Forbidden: transaction does not belong to you'
+            });
+        }
+
         // If already successful, return existing transaction
         if (transaction.status === 'successful') {
             return res.status(200).json({
@@ -136,7 +162,6 @@ export const handleVerifyPayment = async (req: Request<{}, {}, {}, { transaction
 
         // Check if payment was successful
         if (verificationResponse.data.status !== 'successful') {
-            // Update transaction status to failed
             transaction.status = 'failed';
             transaction.flutterwaveTransactionId = transaction_id;
             await transaction.save();
@@ -145,6 +170,18 @@ export const handleVerifyPayment = async (req: Request<{}, {}, {}, { transaction
                 status: 'failed',
                 message: 'Payment was not successful',
                 transaction
+            });
+        }
+
+        // #17 Verify amount matches what was expected — prevents paying less than course price
+        const course = await Course.findById(transaction.courseId);
+        if (course && verificationResponse.data.amount < transaction.amount) {
+            transaction.status = 'failed';
+            transaction.flutterwaveTransactionId = transaction_id;
+            await transaction.save();
+            return res.status(400).json({
+                status: 'failed',
+                message: 'Payment amount does not match expected amount'
             });
         }
 
@@ -230,6 +267,15 @@ export const handleGetTransactionByRef = async (req: Request<{ tx_ref: string }>
             return res.status(404).json({
                 status: 'failed',
                 message: 'Transaction not found'
+            });
+        }
+
+        // #23 Ownership check — users can only view their own transactions
+        const requestingUserId = req.userId;
+        if (requestingUserId && transaction.userId.toString() !== requestingUserId) {
+            return res.status(403).json({
+                status: 'failed',
+                message: 'Forbidden: transaction does not belong to you'
             });
         }
 

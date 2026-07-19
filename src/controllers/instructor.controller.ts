@@ -35,7 +35,7 @@ const handleInstructorLogin = async (req: Request<InstructorLoginReqBody>, res: 
         }
         const userId = instructor._id.toString();
 
-        const emailResult = await sendVerificationEmail(userId, instructor.email, 'login');
+        const emailResult = await sendVerificationEmail(userId, instructor.email, 'login', 'instructor');
 
         if (emailResult === 'rate-limited') {
             return res.status(429).json({
@@ -81,7 +81,7 @@ const handleApplyAsInstructor = async (req: Request<ApplyInstructorReqBody>, res
             });
         }
 
-        const { name, email, phone, profilePicture } = req.body;
+        const { name, email, phone, specialization, profilePicture } = req.body;
         const hashedPassword = validation.hashedPassword;
 
         const newInstructor = await Instructor.create({
@@ -89,6 +89,7 @@ const handleApplyAsInstructor = async (req: Request<ApplyInstructorReqBody>, res
             email,
             password: hashedPassword,
             phone,
+            specialization,
             profilePicture,
             isVerified: false
         });
@@ -150,6 +151,15 @@ const handleVerifyInstructorOtp = async (req: Request<VerifyInstructorOtpReqBody
             return res.status(400).json({
                 status: "failed",
                 message: result.message
+            });
+        }
+
+        if (result.cookie) {
+            res.cookie(result.cookie.name, result.cookie.value, {
+                maxAge: 30 * 24 * 60 * 60 * 1000,
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             });
         }
 
