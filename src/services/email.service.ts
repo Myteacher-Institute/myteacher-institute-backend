@@ -207,3 +207,42 @@ export const sendAdminWelcomeEmail = async (adminData: { name: string; email: st
     return 'error';
   }
 };
+
+export const sendAccountDeletionEmail = async (email: string, name: string, code: string) => {
+  try {
+    const mailOptions = {
+      from: process.env.GMAIL_EMAIL,
+      to: email,
+      subject: 'Account Deletion Request',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <img src="cid:logo" alt="Logo" style="max-width: 150px;" />
+          </div>
+          <h2 style="color: #dc2626;">Account Deletion Request</h2>
+          <p style="color: #666;">Hello ${name},</p>
+          <p style="color: #666;">You have requested to delete your instructor account. This action cannot be undone. Use the following code to confirm account deletion.</p>
+          <div style="background-color: #fef2f2; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0; color: #dc2626;">
+            ${code}
+          </div>
+          <p style="color: #666;">This code will expire in 10 minutes.</p>
+          <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email.</p>
+        </div>
+      `,
+      attachments: [
+        {
+          filename: 'logo.png',
+          content: logoBuffer,
+          cid: 'logo',
+        },
+      ],
+    };
+
+    await transporter.sendMail(mailOptions);
+    logger.info(`Account deletion email sent successfully to ${email}`);
+    return 'success';
+  } catch (error) {
+    logger.error(`Error in sendAccountDeletionEmail: ${(error as Error)?.message ?? error}`);
+    return 'error';
+  }
+};

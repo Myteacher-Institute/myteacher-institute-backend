@@ -15,11 +15,18 @@ export interface IUser extends mongoose.Document {
     isOnline?: boolean;
     lastSeen?: Date;
     socketId?: string;
+    profilePicture?: string;
 }
 
 import { ICourse, AddCourseReqBody, AddCourseResT, FetchCoursesByUserReqBody, FetchCoursesByUserResT, FetchAllCoursesResT, EditCourseReqBody, EditCourseResT, FetchCourseByIdResT } from './course.type';
 
 import { IAdmin, AddAdminReqBody, AddAdminResT, AdminLoginReqBody, AdminLoginResT, VerifyAdminOtpReqBody, VerifyAdminOtpResT, ResendAdminOtpReqBody, ResendAdminOtpResT, SendAdminResetCodeReqBody, SendAdminResetCodeResT, ResetAdminPasswordReqBody, ResetAdminPasswordResT } from './admin.type';
+
+import { FetchInstructorStudentsResT, AppliedUser, CourseWithStudents } from './instructor-students.type';
+
+import { FetchInstructorEarningsResT, CourseEarnings, EarningsData } from './instructor-earnings.type';
+
+import { EditInstructorProfileReqBody, EditInstructorProfileResT, SendDeleteAccountOTPReqBody, SendDeleteAccountOTPResT, VerifyDeleteAccountOTPReqBody, DeleteInstructorAccountResT, ReportBugReqBody, ReportBugResT } from './instructor-settings.type';
 
 
 
@@ -70,5 +77,19 @@ export type {
     SendAdminResetCodeReqBody,
     SendAdminResetCodeResT,
     ResetAdminPasswordReqBody,
-    ResetAdminPasswordResT
+    ResetAdminPasswordResT,
+    FetchInstructorStudentsResT,
+    AppliedUser,
+    CourseWithStudents,
+    FetchInstructorEarningsResT,
+    CourseEarnings,
+    EarningsData,
+    EditInstructorProfileReqBody,
+    EditInstructorProfileResT,
+    SendDeleteAccountOTPReqBody,
+    SendDeleteAccountOTPResT,
+    VerifyDeleteAccountOTPReqBody,
+    DeleteInstructorAccountResT,
+    ReportBugReqBody,
+    ReportBugResT
 };

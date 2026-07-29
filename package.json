@@ -22,6 +22,7 @@
     "@types/nodemailer": "^8.0.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/redis": "^4.0.11",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -43,6 +44,7 @@
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-email": "^6.0.5",
+    "redis": "^4.6.15",
     "resend": "^6.12.2",
     "socket.io": "^4.8.3",
     "ua-parser-js": "^2.0.9"

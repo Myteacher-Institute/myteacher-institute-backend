@@ -40,6 +40,14 @@ export interface ICourse extends mongoose.Document {
         ipAddress: string;
         appliedAt: Date;
     }[];
+    ratings: {
+        userId: mongoose.Types.ObjectId;
+        userName: string;
+        rating: number;
+        comment: string;
+        ratedAt: Date;
+    }[];
+    averageRating: number;
     price: number;
     duration: number;
     certificate: string;
@@ -155,6 +163,7 @@ export type EditCourseResT = {
     status: "success" | "failed";
     message: string;
     course?: ICourse;
+    deletionErrors?: string[];
 }
 
 export type FetchCourseByIdResT = {

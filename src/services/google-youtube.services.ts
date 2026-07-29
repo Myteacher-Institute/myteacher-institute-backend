@@ -11,7 +11,10 @@ if (!JSON_FILE_PATH) {
 export const CLIENT_SECRET_PATH = path.join(process.cwd(), JSON_FILE_PATH);
 
 // If modifying these scopes, delete your previously saved credentials
-export const SCOPES = ["https://www.googleapis.com/auth/youtube.upload"];
+export const SCOPES = [
+    "https://www.googleapis.com/auth/youtube.upload",
+    "https://www.googleapis.com/auth/youtube"
+];
 
 // Load and parse client secrets
 export const loadClientSecrets = () => {

@@ -4,8 +4,20 @@ import path from "path";
 import fs from "fs";
 import { ProtectMiddleWare } from "../middleware/protect-route";
 import { handleUploadToYouTube, handleYouTubeAuth, handleYouTubeCallback } from "../controllers/youtube-upload.controller";
+import rateLimit from "express-rate-limit";
 
 const youtubeRoute: Router = Router();
+
+// Rate limiter for YouTube upload operations
+const youtubeUploadLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 10, // Limit each IP to 10 YouTube uploads per hour
+    message: {
+        error: "Too many YouTube upload attempts, please try again after an hour"
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 // Ensure upload directory exists
 const UPLOAD_DIR = process.env.VIDEO_UPLOAD_DIR || path.join(process.cwd(), 'uploads', 'videos');
@@ -45,6 +57,6 @@ youtubeRoute.get("/callback", handleYouTubeCallback);
 
 // Upload video to YouTube (requires authentication)
 // multer parses the multipart/form-data and puts the file in req.file
-youtubeRoute.post("/upload", ProtectMiddleWare, upload.single('video'), handleUploadToYouTube);
+youtubeRoute.post("/upload", ProtectMiddleWare, youtubeUploadLimiter, upload.single('video'), handleUploadToYouTube);
 
 export default youtubeRoute;

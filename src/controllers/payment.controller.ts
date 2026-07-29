@@ -5,6 +5,9 @@ import { Course } from '../models/course.model';
 import { createPaymentLink, verifyTransaction, generateTransactionReference } from '../services';
 import { CreatePaymentReqBody, CreatePaymentResT, VerifyPaymentResT } from '../types';
 import { sanitizeRedirectUrl } from '../utils';
+import { emitToUser } from '../config/socket';
+import { invalidateInstructorStudentsCache } from '../services/instructor-students.service';
+import { invalidateInstructorEarningsCache } from '../services/instructor-earnings.service';
 
 const ALLOWED_REDIRECT_ORIGINS = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
@@ -201,6 +204,59 @@ export const handleVerifyPayment = async (req: Request<{}, {}, {}, { transaction
             if (!user.coursesBought.some(boughtCourseId => boughtCourseId.toString() === transaction.courseId.toString())) {
                 user.coursesBought.push(transaction.courseId as any);
                 await user.save();
+
+                // Add user to course's appliedUsers array
+                const course = await Course.findById(transaction.courseId);
+                if (course) {
+                    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+                    
+                    // Check if user is not already in appliedUsers
+                    const isAlreadyApplied = course.appliedUsers?.some(
+                        (appliedUser: any) => appliedUser.userId.toString() === user._id.toString()
+                    );
+
+                    if (!isAlreadyApplied) {
+                        course.appliedUsers = course.appliedUsers || [];
+                        course.appliedUsers.push({
+                            userId: user._id,
+                            userName: user.name,
+                            userEmail: user.email,
+                            ipAddress: clientIp,
+                            appliedAt: new Date()
+                        });
+                        await course.save();
+
+                        // Emit real-time update to instructor
+                        if (course.instructorDetails?.userId) {
+                            emitToUser(course.instructorDetails.userId.toString(), 'student:enrolled', {
+                                courseId: course._id,
+                                courseName: course.courseName,
+                                student: {
+                                    userId: user._id,
+                                    userName: user.name,
+                                    userEmail: user.email,
+                                    appliedAt: new Date()
+                                }
+                            });
+
+                            // Emit earnings update to instructor
+                            emitToUser(course.instructorDetails.userId.toString(), 'earnings:updated', {
+                                courseId: course._id,
+                                courseName: course.courseName,
+                                newStudent: {
+                                    userId: user._id,
+                                    userName: user.name,
+                                    userEmail: user.email
+                                },
+                                coursePrice: course.price
+                            });
+
+                            // Invalidate cache for this instructor
+                            await invalidateInstructorStudentsCache(course.instructorDetails.userId.toString());
+                            await invalidateInstructorEarningsCache(course.instructorDetails.userId.toString());
+                        }
+                    }
+                }
             }
         }
 

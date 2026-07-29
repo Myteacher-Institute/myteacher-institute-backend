@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { google } from "googleapis";
 import multer from "multer";
+import { Readable } from "stream";
 import { Instructor } from "../models/instructor.model";
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -107,15 +108,64 @@ const handleDriveCallback = async (req: Request, res: Response) => {
         instructor.driveTokens = {
             accessToken: tokens.access_token || "",
             refreshToken: tokens.refresh_token || "",
-            expiryDate: tokens.expiry_date ? Date.parse(tokens.expiry_date.toString()) : 0
+            expiryDate: tokens.expiry_date ? (typeof tokens.expiry_date === 'number' ? tokens.expiry_date : Date.parse(String(tokens.expiry_date))) : 0
         };
 
         await instructor.save();
 
-        return res.status(200).json({
-            status: "success",
-            message: "Google Drive authentication successful"
-        });
+        // Return HTML to close popup and redirect
+        res.send(`
+            <html>
+                <head>
+                    <style>
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            height: 100vh;
+                            margin: 0;
+                            background: linear-gradient(135deg, #fff 0%, #84baf8 100%);
+                        }
+                        .container {
+                            text-align: center;
+                            padding: 40px;
+                            background: white;
+                            border-radius: 16px;
+                            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                        }
+                        .icon {
+                            background: url(../assets/logo.png) no-repeat center center;
+                            background-size: contain;
+                            width: 100px;
+                            height: 100px;
+                            margin-bottom: 16px;
+                        }
+                        h1 {
+                            color: #333;
+                            margin: 0 0 8px 0;
+                            font-size: 24px;
+                        }
+                        p {
+                            color: #666;
+                            margin: 0;
+                            font-size: 14px;
+                        }
+                    </style>
+                    <script>
+                        window.opener.postMessage({ type: 'drive-auth-success' }, '*');
+                        setTimeout(() => window.close(), 1500);
+                    </script>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="icon"></div>
+                        <h1>Authentication Successful</h1>
+                        <p>Google Drive connected. This window will close automatically.</p>
+                    </div>
+                </body>
+            </html>
+        `);
     } catch (error) {
         console.error('Google Drive callback error --->', (error as Error)?.message ?? error);
         res.status(500).json({
@@ -181,7 +231,7 @@ const handleDriveUpload = async (req: Request, res: Response) => {
             if (credentials.access_token) {
                 instructor.driveTokens.accessToken = credentials.access_token;
                 if (credentials.expiry_date) {
-                    instructor.driveTokens.expiryDate = Date.parse(credentials.expiry_date.toString());
+                    instructor.driveTokens.expiryDate = typeof credentials.expiry_date === 'number' ? credentials.expiry_date : Date.parse(String(credentials.expiry_date));
                 }
                 await instructor.save();
             }
@@ -195,7 +245,7 @@ const handleDriveUpload = async (req: Request, res: Response) => {
 
         const media = {
             mimeType: file.mimetype,
-            body: Buffer.from(file.buffer),
+            body: Readable.from(file.buffer),
         };
 
         const response = await drive.files.create({

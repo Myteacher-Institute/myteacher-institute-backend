@@ -17,36 +17,36 @@ export const courseSchema = new mongoose.Schema<ICourse>({
             videoDescription: String,
             videoDuration: Number,
             isProgrammingVideo: Boolean,
-            isPreview: Boolean,
-            programmingCodes: [
+            isPreview: Boolean
+        }
+    ],
+    programmingCodes: [
+        {
+            code: String,
+            language: String,
+            explanation: String,
+            fileName: String
+        }
+    ],
+    assets: [
+        {
+            name: String,
+            url: String
+        }
+    ],
+    quizzes: [
+        {
+            title: String,
+            questions: [
                 {
-                    code: String,
-                    language: String,
-                    explanation: String,
-                    fileName: String
-                }
-            ],
-            assets: [
-                {
-                    name: String,
-                    url: String
-                }
-            ],
-            quizzes: [
-                {
-                    title: String,
-                    questions: [
+                    question: String,
+                    options: [
                         {
-                            question: String,
-                            options: [
-                                {
-                                    option: String,
-                                    isCorrect: Boolean
-                                }
-                            ],
-                            correctAnswer: String
+                            option: String,
+                            isCorrect: Boolean
                         }
-                    ]
+                    ],
+                    correctAnswer: String
                 }
             ]
         }
@@ -61,6 +61,19 @@ export const courseSchema = new mongoose.Schema<ICourse>({
             appliedAt: Date
         }
     ],
+    ratings: [
+        {
+            userId: mongoose.Types.ObjectId,
+            userName: String,
+            rating: Number,
+            comment: String,
+            ratedAt: Date
+        }
+    ],
+    averageRating: {
+        type: Number,
+        default: 0
+    },
     price: {
         type: Number,
         required: true

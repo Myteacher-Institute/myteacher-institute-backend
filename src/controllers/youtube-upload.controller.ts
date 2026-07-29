@@ -135,6 +135,16 @@ const handleUploadToYouTube = async (
             });
         }
 
+        // Guard: a refresh token is required to recover from an expired access token
+        if (!instructor.youtubeTokens.refreshToken) {
+            console.error('YouTube upload error: No refresh token stored — instructor must re-authenticate');
+            cleanup();
+            return res.status(400).json({
+                status: "failed",
+                message: "YouTube re-authentication required. Your session has expired. Please connect YouTube again."
+            });
+        }
+
         const oAuth2Client = createOAuth2Client(google);
         oAuth2Client.setCredentials({
             access_token: instructor.youtubeTokens.accessToken,
@@ -142,7 +152,9 @@ const handleUploadToYouTube = async (
             expiry_date: instructor.youtubeTokens.expiryDate
         });
 
-        if (instructor.youtubeTokens.expiryDate && instructor.youtubeTokens.expiryDate < Date.now()) {
+        // Refresh if: expiry is missing/zero OR token has expired
+        const needsRefresh = !instructor.youtubeTokens.expiryDate || instructor.youtubeTokens.expiryDate < Date.now();
+        if (needsRefresh) {
             await refreshAccessToken(oAuth2Client, instructor);
         }
 
@@ -182,20 +194,24 @@ const handleUploadToYouTube = async (
 const handleYouTubeAuth = async (req: Request, res: Response) => {
     try {
         const instructorId = req.userId;
+        const forceReauth = req.query.force === 'true';
+        
         if (!instructorId) {
             return res.status(401).json({ status: "failed", message: "Unauthorized: Instructor ID not found" });
         }
 
-        // Check if instructor already has valid YouTube tokens
-        const instructor = await Instructor.findById(instructorId);
-        if (instructor && instructor.youtubeTokens) {
-            const hasValidToken = instructor.youtubeTokens.accessToken || instructor.youtubeTokens.refreshToken;
-            if (hasValidToken) {
-                return res.status(200).json({
-                    status: "success",
-                    message: "Already authenticated with YouTube",
-                    authenticated: true,
-                });
+        // Check if instructor already has valid YouTube tokens (unless forcing re-auth)
+        if (!forceReauth) {
+            const instructor = await Instructor.findById(instructorId);
+            if (instructor && instructor.youtubeTokens) {
+                const hasValidToken = instructor.youtubeTokens.accessToken || instructor.youtubeTokens.refreshToken;
+                if (hasValidToken) {
+                    return res.status(200).json({
+                        status: "success",
+                        message: "Already authenticated with YouTube",
+                        authenticated: true,
+                    });
+                }
             }
         }
 
@@ -205,10 +221,12 @@ const handleYouTubeAuth = async (req: Request, res: Response) => {
         const state = signState({ instructorId });
         const authUrl = oAuth2Client.generateAuthUrl({
             access_type: "offline",
+            prompt: "consent",   // Forces Google to always return a refresh_token
             scope: SCOPES,
             state,
         });
 
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
         return res.status(200).json({
             status: "success",
             message: "Authentication URL generated",
@@ -243,23 +261,82 @@ const handleYouTubeCallback = async (req: Request, res: Response) => {
         const { tokens } = await oAuth2Client.getToken(code as string);
         oAuth2Client.setCredentials(tokens);
 
+        // Fetch the existing instructor to preserve the refresh token if Google doesn't send a new one.
+        // Google only returns a refresh_token on the very first consent — subsequent auths omit it.
+        const existingInstructor = await Instructor.findById(parsed.instructorId);
+        const existingRefreshToken = existingInstructor?.youtubeTokens?.refreshToken;
+
         await Instructor.findByIdAndUpdate(parsed.instructorId, {
             youtubeTokens: {
                 accessToken: tokens.access_token,
-                refreshToken: tokens.refresh_token,
+                refreshToken: tokens.refresh_token || existingRefreshToken || '',
                 expiryDate: tokens.expiry_date
             }
         });
 
-        return res.status(200).json({
-            status: "success",
-            message: "Authentication successful",
-            tokens: {
-                access_token: tokens.access_token,
-                expiry_date: tokens.expiry_date
-                // refresh_token intentionally omitted from response
-            }
-        });
+        // Return HTML to close popup and redirect
+        res.send(`
+            <html>
+                <head>
+                    <style>
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            height: 100vh;
+                            margin: 0;
+                            background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+                        }
+                        .container {
+                            text-align: center;
+                            padding: 40px;
+                            background: white;
+                            border-radius: 16px;
+                            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                        }
+                        .icon {
+                            background: url(../assets/logo.png) no-repeat center center;
+                            background-size: contain;
+                            width: 100px;
+                            height: 100px;
+                            margin-bottom: 7px;
+                        }
+
+                        .icon-small {
+                            background: url(../assets/youtube.png) no-repeat center center;
+                            background-size: contain;
+                            width: 100px;
+                            height: 100px;
+                            margin-bottom: 15px;
+                        }
+
+                        h1 {
+                            color: #333;
+                            margin: 0 0 8px 0;
+                            font-size: 24px;
+                        }
+                        p {
+                            color: #666;
+                            margin: 0;
+                            font-size: 14px;
+                        }
+                    </style>
+                    <script>
+                        window.opener.postMessage({ type: 'youtube-auth-success' }, '*');
+                        setTimeout(() => window.close(), 1500);
+                    </script>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="icon"></div>
+                        <div class="icon-small"></div>
+                        <h1>Authentication Successful</h1>
+                        <p>YouTube connected. You can now close this Window.</p>
+                    </div>
+                </body>
+            </html>
+        `);
 
     } catch (error) {
         console.error('YouTube callback error --->', (error as Error)?.message ?? error);

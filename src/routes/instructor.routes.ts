@@ -22,6 +22,21 @@ import {
     handleUpdateInstructor
 } from "../controllers/instructor-setup.controller";
 
+import {
+    handleFetchInstructorStudents
+} from "../controllers/instructor-students.controller";
+
+import {
+    handleFetchInstructorEarnings
+} from "../controllers/instructor-earnings.controller";
+
+import {
+    handleEditInstructorProfile,
+    handleSendDeleteAccountOTP,
+    handleDeleteInstructorAccount,
+    handleReportBug
+} from "../controllers/instructor-settings.controller";
+
 import { ProtectMiddleWare } from "../middleware/protect-route";
 import { isAdmin } from "../middleware/is-admin";
 import rateLimit from "express-rate-limit";
@@ -89,6 +104,14 @@ router.post("/resend-otp", otpLimiter, handleResendInstructorOtp);
 router.post("/send-reset-code", passwordResetLimiter, handleSendResetPasswordCode);
 router.post("/resend-reset-code", passwordResetLimiter, handleResendResetPassword);
 router.post("/reset-password", passwordResetLimiter, handleResetPassword);
+
+// Protected instructor routes (must come before /:instructorId)
+router.get("/students", ProtectMiddleWare, handleFetchInstructorStudents);
+router.get("/earnings", ProtectMiddleWare, handleFetchInstructorEarnings);
+router.patch("/profile", ProtectMiddleWare, handleEditInstructorProfile);
+router.post("/account/send-delete-otp", ProtectMiddleWare, handleSendDeleteAccountOTP);
+router.delete("/account", ProtectMiddleWare, handleDeleteInstructorAccount);
+router.post("/report-bug", ProtectMiddleWare, handleReportBug);
 
 // Protected admin routes with optional rate limiting
 router.patch("/verify/:instructorId", ProtectMiddleWare, isAdmin, adminLimiter, handleVerifyInstructor);

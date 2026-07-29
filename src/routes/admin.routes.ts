@@ -49,7 +49,7 @@ const passwordResetLimiter = rateLimit({
 });
 
 router.post("/login", authLimiter, handleAdminLogin);
-router.post("/add", ProtectMiddleWare, isAdmin, handleAddAdmin);
+router.post("/add", ProtectMiddleWare, isAdmin, generalLimiter, handleAddAdmin);
 router.post('/verify-otp', otpLimiter, handleVerifyAdminOtp);
 router.post('/resend-otp', otpLimiter, handleResendAdminOtp);
 router.post('/send-reset-code', passwordResetLimiter, handleSendAdminResetCode);

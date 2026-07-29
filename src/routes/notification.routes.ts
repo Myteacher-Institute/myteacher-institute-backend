@@ -8,8 +8,20 @@ import {
     deleteAllNotifications,
 } from '../services';
 import { ProtectMiddleWare } from '../middleware/protect-route';
+import rateLimit from 'express-rate-limit';
 
 const notificationRoute: Router = Router();
+
+// Rate limiter for notification operations
+const notificationLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 50, // Limit each IP to 50 notification operations per 15 minutes
+    message: {
+        error: "Too many notification operations, please try again after 15 minutes"
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 // Get notifications for authenticated user
 notificationRoute.get('/', ProtectMiddleWare, async (req, res) => {
@@ -78,7 +90,7 @@ notificationRoute.get('/unread-count', ProtectMiddleWare, async (req, res) => {
 });
 
 // Mark notification as read
-notificationRoute.patch('/:notificationId/read', ProtectMiddleWare, async (req, res) => {
+notificationRoute.patch('/:notificationId/read', ProtectMiddleWare, notificationLimiter, async (req, res) => {
     try {
         const userId = req.userId;
         const { notificationId } = req.params as any;
@@ -114,7 +126,7 @@ notificationRoute.patch('/:notificationId/read', ProtectMiddleWare, async (req, 
 });
 
 // Mark all notifications as read
-notificationRoute.patch('/read-all', ProtectMiddleWare, async (req, res) => {
+notificationRoute.patch('/read-all', ProtectMiddleWare, notificationLimiter, async (req, res) => {
     try {
         const userId = req.userId;
         const userType = req.query.userType as 'admin' | 'instructor' | 'user' || 'user';
@@ -143,7 +155,7 @@ notificationRoute.patch('/read-all', ProtectMiddleWare, async (req, res) => {
 });
 
 // Delete notification
-notificationRoute.delete('/:notificationId', ProtectMiddleWare, async (req, res) => {
+notificationRoute.delete('/:notificationId', ProtectMiddleWare, notificationLimiter, async (req, res) => {
     try {
         const userId = req.userId;
         const { notificationId } = req.params as any;
@@ -178,7 +190,7 @@ notificationRoute.delete('/:notificationId', ProtectMiddleWare, async (req, res)
 });
 
 // Delete all notifications
-notificationRoute.delete('/', ProtectMiddleWare, async (req, res) => {
+notificationRoute.delete('/', ProtectMiddleWare, notificationLimiter, async (req, res) => {
     try {
         const userId = req.userId;
         const userType = req.query.userType as 'admin' | 'instructor' | 'user' || 'user';

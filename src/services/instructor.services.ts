@@ -92,7 +92,7 @@ const verifyInstructor = async (instructorId: string) => {
     const instructor = await Instructor.findByIdAndUpdate(
         instructorId,
         { isVerified: true },
-        { new: true }
+        { returnDocument: 'after' }
     );
 
     if (!instructor) {
@@ -383,7 +383,7 @@ const updateInstructor = async (instructorId: string, updateData: { name?: strin
     if (updateData.email) data.email = updateData.email;
     if (updateData.password) data.password = await bcrypt.hash(updateData.password, 10);
 
-    const instructor = await Instructor.findByIdAndUpdate(instructorId, data, { new: true });
+    const instructor = await Instructor.findByIdAndUpdate(instructorId, data, { returnDocument: 'after' });
 
     if (!instructor) {
         return {

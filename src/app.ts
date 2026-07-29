@@ -1,5 +1,5 @@
 import cors from 'cors';
-import { adminRouter, authRouter, courseRouter, paymentRouter, youtubeRouter, instructorRouter, notificationRouter, driveRouter } from './routes';
+import { adminRouter, authRouter, courseRouter, paymentRouter, youtubeRouter, instructorRouter, notificationRouter, driveRouter, userRouter } from './routes';
 import path from 'path';
 import { configureScalarDocs } from './config/scalar';
 import express, { type Express, type Request, type Response } from 'express';
@@ -43,7 +43,7 @@ const createApp = (): Express => {
     // JSON bodies: 10mb covers base64-encoded images; file uploads should use multipart/form-data
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ limit: '10mb', extended: true }));
-    app.use('/assets', express.static(path.join(process.cwd(), 'src', 'assets')));
+    app.use('/api/assets', express.static(path.join(process.cwd(), 'src', 'assets')));
     app.use(morgan('tiny'));
 
     app.use('/api/auth', authRouter);
@@ -54,6 +54,7 @@ const createApp = (): Express => {
     app.use("/api/instructor", instructorRouter);
     app.use("/api/notifications", notificationRouter);
     app.use("/api/drive", driveRouter);
+    app.use("/api/user", userRouter);
 
     // Health check endpoint for socket connection availability
     app.get('/health', (_req: Request, res: Response) => {

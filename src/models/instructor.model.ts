@@ -35,6 +35,8 @@ const instructorSchema = new Schema<IInstructor>({
     isVerified: { type: Boolean, default: false },
     resetPasswordToken: { type: String },
     resetPasswordExpiry: { type: Date },
+    deleteAccountToken: { type: String },
+    deleteAccountExpiry: { type: Date },
     youtubeTokens: {
         accessToken: { type: String, default: '' },
         refreshToken: { type: String, default: '' },
