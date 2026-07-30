@@ -140,4 +140,32 @@ export const generateJWTCookie = (args: generateJWTCookieT): string | "error" =>
 
 
 
+/**
+ * Sanitize a value to ensure it's a plain string.
+ * Rejects MongoDB operator injection objects ($gt, $ne, etc.)
+ * Use on ALL user-supplied string inputs before DB queries.
+ */
+export const sanitizeString = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  return value;
+};
+
+/**
+ * Validate and sanitize a redirect URL to prevent open redirect attacks.
+ * Only allows URLs that start with an allowed origin.
+ */
+export const sanitizeRedirectUrl = (url: unknown, allowedOrigins: string[]): string | null => {
+  if (typeof url !== 'string') return null;
+  try {
+    const parsed = new URL(url);
+    const origin = `${parsed.protocol}//${parsed.host}`;
+    if (allowedOrigins.some(allowed => origin === allowed || url.startsWith(allowed))) {
+      return url;
+    }
+  } catch {
+    // invalid URL
+  }
+  return null;
+};
+
 export default logger;

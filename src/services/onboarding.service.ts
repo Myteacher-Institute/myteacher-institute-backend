@@ -101,6 +101,10 @@ export const completeOnboarding = async (
                 message: 'Onboarding completed successfully',
                 authUser: updatedUser,
                 accessToken: accessToken as string,
+                cookie: {
+                    name: process.env.REFRESH_TOKEN_COOKIE_NAME || 'refresh_token',
+                    value: sessionRes.token
+                }
             },
         };
     } catch (error) {

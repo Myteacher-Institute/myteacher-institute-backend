@@ -23,6 +23,10 @@ const instructorSchema = new Schema<IInstructor>({
         type: Schema.Types.ObjectId, 
         ref: "Course" 
     }],
+    specialization: { 
+        type: String, 
+        required: true 
+    },
     password: { 
         type: String, 
         required: true 
@@ -31,10 +35,41 @@ const instructorSchema = new Schema<IInstructor>({
     isVerified: { type: Boolean, default: false },
     resetPasswordToken: { type: String },
     resetPasswordExpiry: { type: Date },
+    deleteAccountToken: { type: String },
+    deleteAccountExpiry: { type: Date },
     youtubeTokens: {
         accessToken: { type: String, default: '' },
         refreshToken: { type: String, default: '' },
         expiryDate: { type: Number, default: 0 }
+    },
+    driveTokens: {
+        accessToken: { type: String, default: '' },
+        refreshToken: { type: String, default: '' },
+        expiryDate: { type: Number, default: 0 }
+    },
+    isOnline: {
+        type: Boolean,
+        default: false
+    },
+    lastSeen: {
+        type: Date
+    },
+    socketId: {
+        type: String
+    },
+    affiliate_id: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+    affiliate_money: {
+        type: Number,
+        default: 0
+    },
+    googleId: {
+        type: String,
+        unique: true,
+        sparse: true
     }
 }, {
     timestamps: true

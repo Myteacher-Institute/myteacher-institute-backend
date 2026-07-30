@@ -35,6 +35,37 @@ const userSchema = new mongoose.Schema<IUser>({
     role: {
       type: String,
       enum: ["user", "instructor", "admin"]
+    },
+    isOnline: {
+      type: Boolean,
+      default: false
+    },
+    lastSeen: {
+      type: Date
+    },
+    socketId: {
+      type: String
+    },
+    profilePicture: {
+      type: String
+    },
+    hasAffiliateAccount: {
+      type: Boolean,
+      default: false
+    },
+    affiliate_id: {
+      type: String,
+      unique: true,
+      sparse: true
+    },
+    affiliate_money: {
+      type: Number,
+      default: 0
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true
     }
 }, {
     timestamps: true

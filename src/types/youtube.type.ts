@@ -1,8 +1,7 @@
 export interface YouTubeUploadReqBody {
-    videoPath: string;
     title?: string;
     description?: string;
-    tags?: string[];
+    tags?: string | string[]; // multipart sends tags as comma-separated string or repeated fields
     privacyStatus?: "public" | "private" | "unlisted";
 }
 
@@ -12,3 +11,5 @@ export interface YouTubeUploadResT {
     videoId?: string | null;
     videoUrl?: string;
 }
+
+

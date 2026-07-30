@@ -1,17 +1,53 @@
 import { Router } from "express";
 import { isInstructor } from "../middleware/is-instructor";
 import { ProtectMiddleWare } from "../middleware/protect-route";
-import { handleAddCourse, handleFetchCoursesByAppliedUser, handleFetchAllCourses } from "../controllers/course.controller";
+import { handleAddCourse, handleCourseEdit, handleFetchCourseById, handleFetchCoursesByAppliedUser, handleFetchAllCourses, handleFetchCoursesByInstructor, handleDeleteCourse, handleRetryDeletion, handleDeleteOnly, handleAddRating, handleInstructorStatistics } from "../controllers/course.controller";
+import rateLimit from "express-rate-limit";
 
 const courseRouter: Router = Router();
 
-// Add course (instructor only)
-courseRouter.post("/add", ProtectMiddleWare, isInstructor, handleAddCourse);
+// Rate limiter for course operations
+const courseOperationLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 30, // Limit each IP to 30 course operations per 15 minutes
+    message: {
+        error: "Too many course operations, please try again after 15 minutes"
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
-// Fetch courses by applied user (protected route)
+// Add course (instructor only)
+courseRouter.post("/add", ProtectMiddleWare, isInstructor, courseOperationLimiter, handleAddCourse);
+
+// Edit course (instructor only)
+courseRouter.put("/edit/:courseId", ProtectMiddleWare, isInstructor, courseOperationLimiter, handleCourseEdit);
+
+// Delete course (instructor only)
+courseRouter.delete("/delete/:courseId", ProtectMiddleWare, isInstructor, courseOperationLimiter, handleDeleteCourse);
+
+// Retry deletion (instructor only)
+courseRouter.post("/retry-deletion/:courseId", ProtectMiddleWare, isInstructor, courseOperationLimiter, handleRetryDeletion);
+
+// Delete only (instructor only) - for deletion before upload flow
+courseRouter.post("/delete-only/:courseId", ProtectMiddleWare, isInstructor, courseOperationLimiter, handleDeleteOnly);
+
+// Fetch courses by applied user (protected route) - must come before /:courseId
 courseRouter.get("/my-courses", ProtectMiddleWare, handleFetchCoursesByAppliedUser);
 
-// Fetch all courses (public route - excluding courseVideos and certificate)
+// Fetch courses by instructor (instructor only)
+courseRouter.get("/instructor-courses", ProtectMiddleWare, isInstructor, handleFetchCoursesByInstructor);
+
+// Get instructor statistics (instructor only)
+courseRouter.get("/instructor-statistics", ProtectMiddleWare, isInstructor, handleInstructorStatistics);
+
+// Add rating to course (protected route - students only)
+courseRouter.post("/:courseId/rating", ProtectMiddleWare, courseOperationLimiter, handleAddRating);
+
+// Fetch all courses (public route - excluding courseVideos and certificate) - must come before /:courseId
 courseRouter.get("/all", handleFetchAllCourses);
+
+// Fetch course by ID (protected route) - must come after specific routes
+courseRouter.get("/:courseId", ProtectMiddleWare, handleFetchCourseById);
 
 export default courseRouter;

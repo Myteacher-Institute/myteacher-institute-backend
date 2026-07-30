@@ -20,13 +20,15 @@ const transporter = nodemailer.createTransport({
 export const sendVerificationEmail = async (
   userId: string,
   email: string,
-  otpUseCase: 'new-account' | 'onboarded-account' | 'login'
+  otpUseCase: 'new-account' | 'onboarded-account' | 'login',
+  accountType: 'user' | 'admin' | 'instructor' = 'user'
 ): Promise<'success' | 'error' | 'rate-limited'> => {
   try {
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
     let existingOtp = await Otp.findOne({
       accountToVerifyId: userId,
+      accountType: accountType,
       isUsed: false,
     });
 
@@ -38,6 +40,8 @@ export const sendVerificationEmail = async (
       existingOtp.otp = otpCode;
       existingOtp.sendAttempts += 1;
       existingOtp.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      existingOtp.useCase = otpUseCase;
+      existingOtp.accountType = accountType;
       await existingOtp.save();
     } else {
       await Otp.create({
@@ -46,6 +50,7 @@ export const sendVerificationEmail = async (
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
         isUsed: false,
         useCase: otpUseCase,
+        accountType: accountType,
         sendAttempts: 1,
       });
     }
@@ -160,6 +165,84 @@ export const sendInstructorApplicationEmail = async (instructorData: { name: str
     return 'success';
   } catch (error) {
     logger.error(`Error in sendInstructorApplicationEmail: ${(error as Error)?.message ?? error}`);
+    return 'error';
+  }
+};
+
+export const sendAdminWelcomeEmail = async (adminData: { name: string; email: string; password: string }) => {
+  try {
+    const mailOptions = {
+      from: process.env.GMAIL_EMAIL,
+      to: adminData.email,
+      subject: 'Welcome to MyTeacher Institute - Admin Account Created',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <img src="cid:logo" alt="Logo" style="max-width: 150px;" />
+          </div>
+          <h2 style="color: #333;">Welcome to MyTeacher Institute</h2>
+          <p style="color: #666;">Dear ${adminData.name},</p>
+          <p style="color: #666;">Your admin account has been successfully created. You can now access the admin panel to manage the platform.</p>
+          <div style="background-color: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px;">
+            <p style="margin: 10px 0;"><strong>Email:</strong> ${adminData.email}</p>
+          </div>
+          <p style="color: #666;">Please log in to your account using the credentials above. We recommend changing your password after your first login.</p>
+          <p style="color: #999; font-size: 12px;">If you didn't request this account, please contact support immediately.</p>
+        </div>
+      `,
+      attachments: [
+        {
+          filename: 'logo.png',
+          content: logoBuffer,
+          cid: 'logo',
+        },
+      ],
+    };
+
+    await transporter.sendMail(mailOptions);
+    logger.info(`Admin welcome email sent successfully to ${adminData.email}`);
+    return 'success';
+  } catch (error) {
+    logger.error(`Error in sendAdminWelcomeEmail: ${(error as Error)?.message ?? error}`);
+    return 'error';
+  }
+};
+
+export const sendAccountDeletionEmail = async (email: string, name: string, code: string) => {
+  try {
+    const mailOptions = {
+      from: process.env.GMAIL_EMAIL,
+      to: email,
+      subject: 'Account Deletion Request',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <img src="cid:logo" alt="Logo" style="max-width: 150px;" />
+          </div>
+          <h2 style="color: #dc2626;">Account Deletion Request</h2>
+          <p style="color: #666;">Hello ${name},</p>
+          <p style="color: #666;">You have requested to delete your instructor account. This action cannot be undone. Use the following code to confirm account deletion.</p>
+          <div style="background-color: #fef2f2; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0; color: #dc2626;">
+            ${code}
+          </div>
+          <p style="color: #666;">This code will expire in 10 minutes.</p>
+          <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email.</p>
+        </div>
+      `,
+      attachments: [
+        {
+          filename: 'logo.png',
+          content: logoBuffer,
+          cid: 'logo',
+        },
+      ],
+    };
+
+    await transporter.sendMail(mailOptions);
+    logger.info(`Account deletion email sent successfully to ${email}`);
+    return 'success';
+  } catch (error) {
+    logger.error(`Error in sendAccountDeletionEmail: ${(error as Error)?.message ?? error}`);
     return 'error';
   }
 };

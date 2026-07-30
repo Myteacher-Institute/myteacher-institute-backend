@@ -107,12 +107,15 @@ export const generateSession = async ({
     const expiresAt = new Date();
     expiresAt.setMonth(expiresAt.getMonth() + 1);
 
-    const countSessions = await Session.countDocuments({
-      userId,
-    });
+    const MAX_SESSIONS = 12;
+    const countSessions = await Session.countDocuments({ userId });
 
-    if (countSessions >= 12) {
-      return { isSuccessful: false, reason: 'Too many sessions' };
+    if (countSessions >= MAX_SESSIONS) {
+      // Evict the oldest session (by createdAt) to make room instead of hard-blocking
+      const oldest = await Session.findOne({ userId }).sort({ createdAt: 1 });
+      if (oldest) {
+        await Session.deleteOne({ _id: oldest._id });
+      }
     }
 
     const newSession = await Session.create({

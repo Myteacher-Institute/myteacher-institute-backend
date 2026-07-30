@@ -8,14 +8,30 @@ export interface IInstructor extends mongoose.Document {
     courses: mongoose.Types.ObjectId[];
     password: string;
     moneyMade: number;
+    specialization: string;
     isVerified: boolean;
     resetPasswordToken?: string;
     resetPasswordExpiry?: Date;
+    deleteAccountToken?: string;
+    deleteAccountExpiry?: Date;
+    bio?: string;
+    expertise?: string[];
     youtubeTokens?: {
         accessToken: string;
         refreshToken: string;
         expiryDate: number;
     };
+    driveTokens?: {
+        accessToken: string;
+        refreshToken: string;
+        expiryDate: number;
+    };
+    isOnline?: boolean;
+    lastSeen?: Date;
+    socketId?: string;
+    affiliate_id?: string;
+    affiliate_money?: number;
+    googleId?: string;
 }
 
 export type InstructorLoginReqBody = {
@@ -35,6 +51,7 @@ export type ApplyInstructorReqBody = {
     email: string;
     password: string;
     phone: string;
+    specialization: string;
     profilePicture: string;
 }
 
@@ -120,12 +137,17 @@ export type VerifyInstructorOtpResT = {
         email: string;
         profilePicture: string;
         phone: string;
+        specialization: string;
         courses: Array<any>;
         moneyMade: number;
         youtubeTokens: {} | any;
         isVerified: boolean;
     },
-    accessToken?: string
+    accessToken?: string,
+    cookie?: {
+        name: string;
+        value: string;
+    }
 }
 
 export type ResendInstructorOtpReqBody = {

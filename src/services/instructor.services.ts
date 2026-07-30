@@ -7,6 +7,7 @@ import Otp from "../models/otp.model";
 import { generateSession } from "./session.service";
 import { generateJWT, getClientIp } from "../utils";
 import { sendVerificationEmail } from "./email.service";
+import { createNotification } from "./notification.service";
 
 const instructorLoginValidation = async (payload: { email?: string; password?: string }) => {
     const { email, password } = payload;
@@ -91,7 +92,7 @@ const verifyInstructor = async (instructorId: string) => {
     const instructor = await Instructor.findByIdAndUpdate(
         instructorId,
         { isVerified: true },
-        { new: true }
+        { returnDocument: 'after' }
     );
 
     if (!instructor) {
@@ -99,6 +100,21 @@ const verifyInstructor = async (instructorId: string) => {
             success: false,
             message: "Instructor not found"
         };
+    }
+
+    // Send notification to the instructor
+    try {
+        await createNotification({
+            recipientId: instructor._id.toString(),
+            recipientType: 'instructor',
+            title: 'Application Approved',
+            message: 'Your instructor application has been approved. You can now start creating courses.',
+            type: 'success',
+            relatedId: instructor._id.toString(),
+            relatedType: 'instructor'
+        });
+    } catch (error) {
+        console.error('Failed to create notification:', error);
     }
 
     return {
@@ -272,6 +288,21 @@ const rejectInstructor = async (instructorId: string) => {
         };
     }
 
+    // Send notification to the instructor
+    try {
+        await createNotification({
+            recipientId: instructor._id.toString(),
+            recipientType: 'instructor',
+            title: 'Application Rejected',
+            message: 'Your instructor application has been rejected. Please contact support for more information.',
+            type: 'error',
+            relatedId: instructor._id.toString(),
+            relatedType: 'instructor'
+        });
+    } catch (error) {
+        console.error('Failed to create notification:', error);
+    }
+
     return {
         success: true,
         message: "Instructor rejected successfully"
@@ -352,7 +383,7 @@ const updateInstructor = async (instructorId: string, updateData: { name?: strin
     if (updateData.email) data.email = updateData.email;
     if (updateData.password) data.password = await bcrypt.hash(updateData.password, 10);
 
-    const instructor = await Instructor.findByIdAndUpdate(instructorId, data, { new: true });
+    const instructor = await Instructor.findByIdAndUpdate(instructorId, data, { returnDocument: 'after' });
 
     if (!instructor) {
         return {
@@ -383,7 +414,14 @@ const verifyInstructorOtp = async (otp: string, req: any) => {
         };
     }
 
-    const findOtp = await Otp.findOne({ otp });
+    // #16 Atomic find-and-delete prevents race condition / OTP reuse
+    // #25 expiresAt enforced at DB query level
+    const findOtp = await Otp.findOneAndDelete({
+      otp,
+      accountType: 'instructor',
+      isUsed: false,
+      expiresAt: { $gt: new Date() },
+    });
 
     if (!findOtp) {
         return {
@@ -391,8 +429,6 @@ const verifyInstructorOtp = async (otp: string, req: any) => {
             message: 'The verification code you entered is invalid or has expired. Please request a new one.'
         };
     }
-
-    await findOtp.deleteOne();
 
     const findInstructor = await Instructor.findById(findOtp.accountToVerifyId);
 
@@ -407,6 +443,16 @@ const verifyInstructorOtp = async (otp: string, req: any) => {
     const userAgent = req.get('User-Agent') || '';
 
     if (findOtp.useCase === 'login') {
+        // Ensure online status fields exist
+        const { ensureOnlineStatusFields } = await import('./user-status.service');
+        await ensureOnlineStatusFields(findInstructor._id.toString(), 'instructor');
+        
+        // Set instructor as online
+        await Instructor.updateOne(
+            { _id: findInstructor._id },
+            { $set: { isOnline: true, lastSeen: new Date() } }
+        );
+        
         const sessionRes = await generateSession({ ip, userAgent, userId: findInstructor._id.toString() });
 
         if (!sessionRes.isSuccessful) {
@@ -422,16 +468,22 @@ const verifyInstructorOtp = async (otp: string, req: any) => {
             success: true,
             message: 'Login successful',
             instructor: {
+                _id: findInstructor._id.toString(),
                 name: findInstructor.name,
                 email: findInstructor.email,
                 profilePicture: findInstructor.profilePicture,
                 phone: findInstructor.phone,
+                specialization: findInstructor.specialization,
                 courses: findInstructor.courses,
                 moneyMade: findInstructor.moneyMade,
                 youtubeTokens: findInstructor.youtubeTokens,
                 isVerified: findInstructor.isVerified
             },
-            accessToken: access_code as string
+            accessToken: access_code as string,
+            cookie: {
+                name: process.env.REFRESH_TOKEN_COOKIE_NAME || 'refresh_token',
+                value: sessionRes.token
+            }
         };
     }
 
@@ -466,7 +518,7 @@ const resendInstructorOtp = async (email: string) => {
         };
     }
 
-    const emailStatus = await sendVerificationEmail(instructor._id.toString(), instructor.email, 'login');
+    const emailStatus = await sendVerificationEmail(instructor._id.toString(), instructor.email, 'login', 'instructor');
 
     if (emailStatus === 'rate-limited') {
         return {

@@ -7,6 +7,9 @@ export interface IAdmin extends mongoose.Document {
     isAdmin: boolean;
     resetPasswordToken?: string;
     resetPasswordExpiry?: Date;
+    isOnline?: boolean;
+    lastSeen?: Date;
+    socketId?: string;
 }
 
 export type AddAdminReqBody = {
