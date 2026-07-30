@@ -12,6 +12,8 @@ const generateAffiliateId = (courseId: string): string => {
         result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     
+
+    
     // Encrypt with course ID using simple hash for security
     const hash = crypto.createHash('sha256').update(result + courseId).digest('hex');
     // Take first 8 characters of hash and append to result
