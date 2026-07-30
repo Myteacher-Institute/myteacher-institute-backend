@@ -1,0 +1,62 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": [
+      "ES2022"
+    ],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "Bundler",
+    "moduleDetection": "force",
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "jsx": "react-jsx"
+  },
+  "paths": {
+    "@/*": [
+      "./src/*"
+    ],
+    "@/config/*": [
+      "./src/config/*"
+    ],
+    "@/controllers/*": [
+      "./src/controllers/*"
+    ],
+    "@/middleware/*": [
+      "./src/middleware/*"
+    ],
+    "@/models/*": [
+      "./src/models/*"
+    ],
+    "@/routes/*": [
+      "./src/routes/*"
+    ],
+    "@/services/*": [
+      "./src/services/*"
+    ],
+    "@/templates/*": [
+      "./src/templates/*"
+    ],
+    "@/types/*": [
+      "./src/types/*"
+    ],
+    "@/utils/*": [
+      "./src/utils/*"
+    ]
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}
