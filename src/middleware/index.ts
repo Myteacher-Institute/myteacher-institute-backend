@@ -3,7 +3,7 @@
 
 import { type Request, type Response, type NextFunction } from 'express';
 
-export const errorHandler = (
+export const errorHandler: any = (
     err: Error,
     _req: Request,
     res: Response,

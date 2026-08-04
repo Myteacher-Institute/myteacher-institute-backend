@@ -3,11 +3,37 @@ import mongoose from "mongoose";
 import { Course } from "../models/course.model";
 import { Instructor } from "../models/instructor.model";
 import { CourseAnalytics } from "../models/course-analytics.model";
-import { AddCourseReqBody, AddCourseResT, FetchCoursesByUserResT, FetchAllCoursesResT, EditCourseReqBody, EditCourseResT, FetchCourseByIdResT } from "../types";
+import { AddCourseReqBody, AddCourseResT, FetchCoursesByUserResT, FetchAllCoursesResT, BrowseCoursesResT, EditCourseReqBody, EditCourseResT, FetchCourseByIdResT, CoursePreviewResT } from "../types";
 import { addCourseValidation } from "../services";
 import { google } from "googleapis";
 import bcrypt from "bcryptjs";
 import { emitToUser } from "../config/socket";
+
+// Flatten the per-chapter content back into the legacy top-level arrays so the
+// rest of the system (previews, browse, dashboards, deletion) keeps working
+// with a single source of truth: the chapters array.
+const flattenCourseChapters = (chapters: any[] = []) => {
+    const videos: any[] = [];
+    const programmingCodes: any[] = [];
+    const assets: any[] = [];
+    const quizzes: any[] = [];
+
+    for (const chapter of chapters) {
+        videos.push(...(chapter?.videos || []));
+        programmingCodes.push(...(chapter?.programmingCodes || []));
+        assets.push(...(chapter?.assets || []));
+        quizzes.push(...(chapter?.quizzes || []));
+    }
+
+    return { videos, programmingCodes, assets, quizzes };
+};
+
+const stripHtml = (html: string = "") =>
+    (html || "")
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 
 const handleAddCourse = async (req: Request<{}, {}, AddCourseReqBody>, res: Response<AddCourseResT>) => {
     try {
@@ -22,7 +48,7 @@ const handleAddCourse = async (req: Request<{}, {}, AddCourseReqBody>, res: Resp
             });
         }
 
-        const { courseName, description, courseVideos, courseRequirements, price, duration, certificate, programmingCodes, assets, quizzes } = req.body;
+        const { courseName, description, chapters, courseVideos, courseRequirements, price, duration, certificate, programmingCodes, assets, quizzes } = req.body;
 
         // Get instructor details from the database
         const instructor = await Instructor.findById(instructorId);
@@ -34,14 +60,20 @@ const handleAddCourse = async (req: Request<{}, {}, AddCourseReqBody>, res: Resp
             });
         }
 
+        // Chapters are the source of truth; the flat arrays below are kept in
+        // sync as a flattened aggregate for backward compatibility.
+        const chaptersToStore = chapters || [];
+        const flattened = flattenCourseChapters(chaptersToStore);
+
         // Create new course
         const newCourse = await Course.create({
             courseName,
             description,
-            courseVideos: courseVideos || [],
-            programmingCodes: programmingCodes || [],
-            assets: assets || [],
-            quizzes: quizzes || [],
+            chapters: chaptersToStore,
+            courseVideos: courseVideos !== undefined ? courseVideos : flattened.videos,
+            programmingCodes: programmingCodes !== undefined ? programmingCodes : flattened.programmingCodes,
+            assets: assets !== undefined ? assets : flattened.assets,
+            quizzes: quizzes !== undefined ? quizzes : flattened.quizzes,
             courseRequirements: courseRequirements || [],
             appliedUsers: [],
             price,
@@ -131,15 +163,25 @@ const handleCourseEdit = async (req: Request<{ courseId: string }, {}, EditCours
         }
 
         // Update course with provided fields
-        const { courseName, description, courseVideos, courseRequirements, price, duration, certificate, programmingCodes, assets, quizzes } = req.body;
+        const { courseName, description, chapters, courseVideos, courseRequirements, price, duration, certificate, programmingCodes, assets, quizzes } = req.body;
+
+        // Chapters are the source of truth; derive the flat aggregate arrays
+        // from them so external-service deletions and legacy consumers keep
+        // working. When chapters aren't provided (old clients) the flat fields
+        // are used directly.
+        const flattenedFromChapters = chapters !== undefined ? flattenCourseChapters(chapters) : null;
+        const effectiveVideos = flattenedFromChapters ? flattenedFromChapters.videos : courseVideos;
+        const effectiveAssets = flattenedFromChapters ? flattenedFromChapters.assets : assets;
+        const effectiveCodes = flattenedFromChapters ? flattenedFromChapters.programmingCodes : programmingCodes;
+        const effectiveQuizzes = flattenedFromChapters ? flattenedFromChapters.quizzes : quizzes;
 
         // Track errors for frontend display
         const deletionErrors: string[] = [];
 
         // Handle YouTube video deletions
-        if (courseVideos !== undefined) {
+        if (effectiveVideos !== undefined) {
             const oldVideoUrls = course.courseVideos?.map((v: any) => v.videoUrl) || [];
-            const newVideoUrls = courseVideos.map((v: any) => v.videoUrl);
+            const newVideoUrls = effectiveVideos.map((v: any) => v.videoUrl);
             const deletedVideos = oldVideoUrls.filter((url: string) => !newVideoUrls.includes(url));
 
             if (deletedVideos.length > 0 && instructor.youtubeTokens) {
@@ -206,13 +248,13 @@ const handleCourseEdit = async (req: Request<{ courseId: string }, {}, EditCours
                 deletionErrors.push("No YouTube tokens found. Please authenticate with YouTube to delete videos.");
             }
 
-            course.courseVideos = courseVideos;
+            course.courseVideos = effectiveVideos;
         }
 
         // Handle Google Drive asset deletions
-        if (assets !== undefined) {
+        if (effectiveAssets !== undefined) {
             const oldAssetUrls = course.assets?.map((a: any) => a.url) || [];
-            const newAssetUrls = assets.map((a: any) => a.url);
+            const newAssetUrls = effectiveAssets.map((a: any) => a.url);
             const deletedAssets = oldAssetUrls.filter((url: string) => !newAssetUrls.includes(url));
 
             if (deletedAssets.length > 0 && instructor.driveTokens) {
@@ -279,17 +321,18 @@ const handleCourseEdit = async (req: Request<{ courseId: string }, {}, EditCours
                 deletionErrors.push("No Drive tokens found. Please authenticate with Google Drive to delete assets.");
             }
 
-            course.assets = assets;
+            course.assets = effectiveAssets;
         }
 
+        if (chapters !== undefined) course.chapters = chapters;
         if (courseName !== undefined) course.courseName = courseName;
         if (description !== undefined) course.description = description;
         if (courseRequirements !== undefined) course.courseRequirements = courseRequirements;
         if (price !== undefined) course.price = price;
         if (duration !== undefined) course.duration = duration;
         if (certificate !== undefined) course.certificate = certificate;
-        if (programmingCodes !== undefined) course.programmingCodes = programmingCodes;
-        if (quizzes !== undefined) course.quizzes = quizzes;
+        if (effectiveCodes !== undefined) course.programmingCodes = effectiveCodes;
+        if (effectiveQuizzes !== undefined) course.quizzes = effectiveQuizzes;
 
         const updatedCourse = await course.save();
 
@@ -376,6 +419,83 @@ const handleFetchCourseById = async (req: Request<{ courseId: string }>, res: Re
     }
 };
 
+const handleFetchCoursePreview = async (req: Request<{ courseId: string }>, res: Response<CoursePreviewResT>) => {
+    try {
+        const { courseId } = req.params;
+
+        if (!courseId) {
+            return res.status(400).json({
+                status: "failed",
+                message: "Course ID is required"
+            });
+        }
+
+        const { cacheGet, cacheSet } = await import('../config/redis');
+        const cacheKey = `course:${courseId}:preview`;
+
+        // Try to get from cache first
+        const cachedCourse = await cacheGet(cacheKey);
+        if (cachedCourse) {
+            console.log('📦 Serving course preview from cache');
+            return res.status(200).json({
+                status: "success",
+                message: "Course fetched successfully",
+                course: cachedCourse
+            });
+        }
+
+        const course = await Course.findById(courseId).lean();
+
+        if (!course) {
+            return res.status(404).json({
+                status: "failed",
+                message: "Course not found"
+            });
+        }
+
+        // Only expose preview videos — never the full course content.
+        const previewVideos = (course.courseVideos || [])
+            .filter((video) => video.isPreview)
+            .map((video) => ({
+                videoUrl: video.videoUrl,
+                videoTitle: video.videoTitle,
+                videoDuration: video.videoDuration,
+            }));
+
+        const mappedCourse = {
+            _id: String(course._id),
+            courseName: course.courseName,
+            description: stripHtml(course.description),
+            price: course.price,
+            duration: course.duration,
+            certificate: course.certificate,
+            courseRequirements: course.courseRequirements ?? [],
+            ratings: course.ratings ?? [],
+            averageRating: course.averageRating ?? 0,
+            instructorName: course.instructorDetails?.name || undefined,
+            lessons: (course.courseVideos ?? []).length,
+            previewThumbnail: getYouTubeThumbnail(previewVideos[0]?.videoUrl),
+            previewVideos,
+        };
+
+        // Cache the result for 10 minutes (600 seconds)
+        await cacheSet(cacheKey, mappedCourse, 600);
+
+        return res.status(200).json({
+            status: "success",
+            message: "Course fetched successfully",
+            course: mappedCourse
+        });
+
+    } catch (error) {
+        console.error('Fetch course preview error --->', (error as Error)?.message ?? error);
+        res.status(500).json({
+            status: "failed",
+            message: "Internal server error"
+        });
+    }
+};
+
 const handleFetchCoursesByAppliedUser = async (req: Request, res: Response<FetchCoursesByUserResT>) => {
     try {
         const userId = req.userId;
@@ -440,9 +560,10 @@ const handleFetchAllCourses = async (req: Request, res: Response<FetchAllCourses
             });
         }
 
-        // Fetch all courses excluding courseVideos and certificate
+        // Fetch all courses excluding courseVideos, chapters and certificate
         const courses = await Course.find({}, {
             courseVideos: 0,
+            chapters: 0,
             certificate: 0
         }).lean();
 
@@ -457,6 +578,134 @@ const handleFetchAllCourses = async (req: Request, res: Response<FetchAllCourses
 
     } catch (error) {
         console.error('Fetch all courses error --->', (error as Error)?.message ?? error);
+        res.status(500).json({
+            status: "failed",
+            message: "Internal server error"
+        });
+    }
+};
+
+// Keywords used to match the frontend filter pills against course names. The
+// Course model has no category field, so categories are inferred from titles.
+const CATEGORY_KEYWORDS: Record<string, RegExp[]> = {
+    Software: [/web/i, /javascript/i, /react/i, /node/i, /mern/i, /full.?stack/i, /programming/i, /development/i, /coding/i, /software/i, /python/i, /java/i],
+    Data: [/data/i, /machine learning/i, /statistics/i, /analytics/i, /python/i, /sql/i],
+    Design: [/design/i, /ui\/?ux/i, /figma/i, /adobe/i, /creative/i, /interface/i, /experience/i],
+    Basics: [/intro/i, /basics/i, /basic/i, /beginner/i, /fundamental/i, /start/i, /first steps/i],
+};
+
+// Extract a YouTube thumbnail from a video URL ('' when not a YouTube link).
+const getYouTubeThumbnail = (videoUrl?: string): string => {
+    if (!videoUrl) return '';
+    const match = videoUrl.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})/);
+    return match ? `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg` : '';
+};
+
+const handleBrowseCourses = async (req: Request, res: Response<BrowseCoursesResT>) => {
+    try {
+        const page = Math.max(parseInt(String(req.query.page), 10) || 1, 1);
+        const limit = Math.min(Math.max(parseInt(String(req.query.limit), 10) || 9, 1), 24);
+        const search = String(req.query.search ?? '').trim();
+        const category = String(req.query.category ?? 'All').trim() || 'All';
+
+        // Only courses that expose at least one preview video.
+        const conditions: Record<string, unknown>[] = [{ 'courseVideos.isPreview': true }];
+
+        if (search) {
+            conditions.push({
+                $or: [
+                    { courseName: { $regex: search, $options: 'i' } },
+                    { description: { $regex: search, $options: 'i' } },
+                ],
+            });
+        }
+
+        if (category !== 'All') {
+            const keywords = CATEGORY_KEYWORDS[category];
+            if (keywords?.length) {
+                conditions.push({ $or: keywords.map((kw) => ({ courseName: { $regex: kw } })) });
+            }
+        }
+
+        const match = conditions.length > 1 ? { $and: conditions } : conditions[0];
+
+        const total = await Course.countDocuments(match);
+
+        const courses = await Course.aggregate([
+            { $match: match },
+            { $sort: { createdAt: -1 } },
+            { $skip: (page - 1) * limit },
+            { $limit: limit },
+            {
+                $addFields: {
+                    lessons: { $size: { $ifNull: ['$courseVideos', []] } },
+                    firstPreviewUrl: {
+                        $arrayElemAt: [
+                            {
+                                $map: {
+                                    input: {
+                                        $filter: {
+                                            input: { $ifNull: ['$courseVideos', []] },
+                                            as: 'v',
+                                            cond: '$$v.isPreview',
+                                        },
+                                    },
+                                    as: 'pv',
+                                    in: '$$pv.videoUrl',
+                                },
+                            },
+                            0,
+                        ],
+                    },
+                },
+            },
+            {
+                $project: {
+                    courseName: 1,
+                    description: 1,
+                    price: 1,
+                    duration: 1,
+                    courseRequirements: 1,
+                    ratings: 1,
+                    averageRating: 1,
+                    instructorName: { $ifNull: ['$instructorDetails.name', ''] },
+                    lessons: 1,
+                    previewVideoUrl: { $ifNull: ['$firstPreviewUrl', ''] },
+                },
+            },
+        ]);
+
+        const mappedCourses = courses.map((course) => ({
+            _id: String(course._id),
+            courseName: course.courseName,
+            description: stripHtml(course.description),
+            price: course.price,
+            duration: course.duration,
+            courseRequirements: course.courseRequirements ?? [],
+            ratings: course.ratings ?? [],
+            averageRating: course.averageRating ?? 0,
+            instructorName: course.instructorName || undefined,
+            lessons: course.lessons ?? 0,
+            previewThumbnail: getYouTubeThumbnail(course.previewVideoUrl),
+        }));
+
+        const totalPages = Math.ceil(total / limit);
+
+        return res.status(200).json({
+            status: "success",
+            message: "Courses fetched successfully",
+            courses: mappedCourses,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages,
+                hasMore: page < totalPages,
+            },
+        });
+
+    } catch (error) {
+        console.error('Browse courses error --->', (error as Error)?.message ?? error);
         res.status(500).json({
             status: "failed",
             message: "Internal server error"
@@ -1270,8 +1519,10 @@ export {
     handleAddCourse,
     handleCourseEdit,
     handleFetchCourseById,
+    handleFetchCoursePreview,
     handleFetchCoursesByAppliedUser,
     handleFetchAllCourses,
+    handleBrowseCourses,
     handleFetchCoursesByInstructor,
     handleDeleteCourse,
     handleRetryDeletion,

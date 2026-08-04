@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { isInstructor } from "../middleware/is-instructor";
 import { ProtectMiddleWare } from "../middleware/protect-route";
-import { handleAddCourse, handleCourseEdit, handleFetchCourseById, handleFetchCoursesByAppliedUser, handleFetchAllCourses, handleFetchCoursesByInstructor, handleDeleteCourse, handleRetryDeletion, handleDeleteOnly, handleAddRating, handleInstructorStatistics } from "../controllers/course.controller";
+import { handleAddCourse, handleCourseEdit, handleFetchCourseById, handleFetchCoursePreview, handleFetchCoursesByAppliedUser, handleFetchAllCourses, handleBrowseCourses, handleFetchCoursesByInstructor, handleDeleteCourse, handleRetryDeletion, handleDeleteOnly, handleAddRating, handleInstructorStatistics } from "../controllers/course.controller";
 import rateLimit from "express-rate-limit";
 
 const courseRouter: Router = Router();
@@ -46,6 +46,14 @@ courseRouter.post("/:courseId/rating", ProtectMiddleWare, courseOperationLimiter
 
 // Fetch all courses (public route - excluding courseVideos and certificate) - must come before /:courseId
 courseRouter.get("/all", handleFetchAllCourses);
+
+// Browse courses (public route) - lean projection, preview-video courses only,
+// with pagination, search and category filter for the All-Courses page.
+courseRouter.get("/browse", handleBrowseCourses);
+
+// Fetch course preview (protected route) - only preview videos + lean fields,
+// used by the protected course purchase page. Must come before /:courseId.
+courseRouter.get("/:courseId/preview", ProtectMiddleWare, handleFetchCoursePreview);
 
 // Fetch course by ID (protected route) - must come after specific routes
 courseRouter.get("/:courseId", ProtectMiddleWare, handleFetchCourseById);

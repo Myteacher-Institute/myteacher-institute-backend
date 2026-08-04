@@ -192,7 +192,7 @@ export const registerUser = async (
       isEmailVerified: false,
       hasOnboarded: false,
       role: 'user', // #18 role always hardcoded — never taken from request body
-      hasAffiliateAccount: hasAffiliateAccount || false,
+      hasAffiliateAccount: true || hasAffiliateAccount,
       affiliate_money: 0,
     });
 

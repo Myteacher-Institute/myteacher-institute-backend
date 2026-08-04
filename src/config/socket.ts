@@ -116,16 +116,16 @@ export const getIO = (): SocketIOServer => {
 };
 
 export const emitToUser = (userId: string, event: string, data: any): void => {
-  const ioInstance = getIO();
-  ioInstance.to(`user:${userId}`).emit(event, data);
+  if (!io) return;
+  io.to(`user:${userId}`).emit(event, data);
 };
 
 export const emitToUserType = (userType: 'admin' | 'instructor' | 'user', event: string, data: any): void => {
-  const ioInstance = getIO();
-  ioInstance.to(`user_type:${userType}`).emit(event, data);
+  if (!io) return;
+  io.to(`user_type:${userType}`).emit(event, data);
 };
 
 export const broadcastToAll = (event: string, data: any): void => {
-  const ioInstance = getIO();
-  ioInstance.emit(event, data);
+  if (!io) return;
+  io.emit(event, data);
 };

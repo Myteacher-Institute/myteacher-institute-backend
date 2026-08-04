@@ -6,7 +6,7 @@ import { IUser } from "../models/user.model";
 import { instructorLoginValidation, applyInstructorValidation, verifyInstructor, sendResetPasswordCode, resetPassword, resendResetPassword, rejectInstructor, getAllInstructors, getInstructorById, deleteInstructor, updateInstructor, verifyInstructorOtp, resendInstructorOtp } from "./instructor.services";
 import { adminLoginValidation, verifyAdminOtp, resendAdminOtp, sendAdminResetCode, resetAdminPassword } from "./admin.services";
 
-import { createPaymentLink, verifyTransaction, generateTransactionReference } from './flutterwave.services';
+import { createPaymentLink, verifyTransaction, verifyTransactionByReference, generateTransactionReference } from './flutterwave.services';
 
 import { addCourseValidation } from './course.services';
 
@@ -112,6 +112,7 @@ export {
     resendInstructorOtp,
     createPaymentLink,
     verifyTransaction,
+    verifyTransactionByReference,
     generateTransactionReference,
     addCourseValidation,
     adminLoginValidation,

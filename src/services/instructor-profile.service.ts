@@ -16,7 +16,8 @@ export const editInstructorProfile = async (instructorId: string, profileData: a
         if (profileData.phone) instructor.phone = profileData.phone;
         if (profileData.bio) instructor.bio = profileData.bio;
         if (profileData.expertise) instructor.expertise = profileData.expertise;
-        if (profileData.profilePicture) instructor.profilePicture = profileData.profilePicture;
+        // profilePicture is NOT updated here — it goes through the dedicated
+        // profile-picture upload route so base64 never travels in JSON.
 
         await instructor.save();
 

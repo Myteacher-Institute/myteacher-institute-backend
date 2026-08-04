@@ -1,58 +1,30 @@
 import { Request, Response } from "express";
 import fs from "fs";
 import path from "path";
-import crypto from "crypto";
 import { google } from "googleapis";
 import { YouTubeUploadReqBody, YouTubeUploadResT } from "../types/youtube.type";
 import { Instructor } from "../models/instructor.model";
 import { SCOPES, createOAuth2Client } from "../services/google-youtube.services";
+import { enqueueYouTubeUpload } from "../queues";
+import type { YouTubeUploadJob } from "../queues/types";
+import { signState, verifyState } from "../utils/oauth-state";
 
 // Allowed base directory — must match the multer destination in youtube.routes.ts
 const ALLOWED_VIDEO_DIR = path.resolve(
     process.env.VIDEO_UPLOAD_DIR || path.join(process.cwd(), 'uploads', 'videos')
 );
 
-// #13 Sign OAuth state with HMAC so it can't be forged
-const STATE_SECRET = process.env.OAUTH_STATE_SECRET || crypto.randomBytes(32).toString('hex');
-
-const signState = (payload: object): string => {
-    const b64 = Buffer.from(JSON.stringify(payload)).toString('base64url');
-    const sig = crypto.createHmac('sha256', STATE_SECRET).update(b64).digest('base64url');
-    return `${b64}.${sig}`;
-};
-
-const verifyState = (state: string): { instructorId: string } | null => {
-    const parts = state.split('.');
-    if (parts.length !== 2) return null;
-    const [b64, sig] = parts;
-    const expected = crypto.createHmac('sha256', STATE_SECRET).update(b64).digest('base64url');
-    try {
-        if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
-        return JSON.parse(Buffer.from(b64, 'base64url').toString());
-    } catch {
-        return null;
+const parseClientVideoIndex = (raw: unknown): number | undefined => {
+    if (typeof raw === 'number') return raw;
+    if (typeof raw === 'string' && raw.trim() !== '') {
+        const parsed = Number(raw);
+        return Number.isNaN(parsed) ? undefined : parsed;
     }
+    return undefined;
 };
 
-// Helper function to refresh tokens if expired
-const refreshAccessToken = async (oAuth2Client: any, instructor: any) => {
-    try {
-        const { credentials } = await oAuth2Client.refreshAccessToken();
-        oAuth2Client.setCredentials(credentials);
-        await Instructor.findByIdAndUpdate(instructor._id, {
-            youtubeTokens: {
-                accessToken: credentials.access_token,
-                refreshToken: credentials.refresh_token || instructor.youtubeTokens.refreshToken,
-                expiryDate: credentials.expiry_date
-            }
-        });
-        return credentials;
-    } catch (error) {
-        console.error('Token refresh error --->', error);
-        throw new Error('Failed to refresh access token');
-    }
-};
-
+// Enqueue the upload and return immediately (202). The actual YouTube upload
+// runs on a BullMQ worker and reports progress/completion over the socket.
 const handleUploadToYouTube = async (
     req: Request<{}, {}, YouTubeUploadReqBody> & { file?: Express.Multer.File },
     res: Response<YouTubeUploadResT>
@@ -60,7 +32,8 @@ const handleUploadToYouTube = async (
     const uploadedFilePath = req.file?.path;
 
     const cleanup = () => {
-        // Delete the temp file after upload (success or failure)
+        // Delete the temp file if we fail before it is enqueued.
+        // Once enqueued, the worker owns cleanup.
         if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
             fs.unlink(uploadedFilePath, () => {});
         }
@@ -103,90 +76,30 @@ const handleUploadToYouTube = async (
                 ? tags.split(',').map(t => t.trim())
                 : [];
 
-        const instructor = await Instructor.findById(instructorId);
-        if (!instructor || !instructor.youtubeTokens) {
-            console.error('YouTube upload error: No instructor or missing YouTube tokens', { instructorId, hasInstructor: !!instructor, hasTokens: !!instructor?.youtubeTokens });
-            cleanup();
-            return res.status(400).json({
-                status: "failed",
-                message: "YouTube authentication required. Please authenticate first."
-            });
-        }
+        const clientVideoIndex = parseClientVideoIndex(req.body.clientVideoIndex);
 
-        // Validate that tokens have required fields
-        if (!instructor.youtubeTokens.accessToken && !instructor.youtubeTokens.refreshToken) {
-            console.error('YouTube upload error: Invalid YouTube tokens', { 
-                hasAccessToken: !!instructor.youtubeTokens.accessToken, 
-                hasRefreshToken: !!instructor.youtubeTokens.refreshToken 
-            });
-            cleanup();
-            return res.status(400).json({
-                status: "failed",
-                message: "Invalid YouTube tokens. Please authenticate again."
-            });
-        }
+        const job: YouTubeUploadJob = {
+            instructorId,
+            filePath: resolvedPath,
+            originalName: req.file.originalname,
+            title: title || req.file.originalname,
+            description: description || "",
+            tags: parsedTags,
+            privacyStatus: privacyStatus || "private",
+            clientVideoIndex,
+        };
 
-        // Check if file exists before attempting upload
-        if (!fs.existsSync(resolvedPath)) {
-            console.error('YouTube upload error: File not found', { resolvedPath });
-            return res.status(400).json({
-                status: "failed",
-                message: "Video file not found. Please upload the file again."
-            });
-        }
+        // Enqueue — the worker owns the file from here on
+        await enqueueYouTubeUpload(job);
 
-        // Guard: a refresh token is required to recover from an expired access token
-        if (!instructor.youtubeTokens.refreshToken) {
-            console.error('YouTube upload error: No refresh token stored — instructor must re-authenticate');
-            cleanup();
-            return res.status(400).json({
-                status: "failed",
-                message: "YouTube re-authentication required. Your session has expired. Please connect YouTube again."
-            });
-        }
-
-        const oAuth2Client = createOAuth2Client(google);
-        oAuth2Client.setCredentials({
-            access_token: instructor.youtubeTokens.accessToken,
-            refresh_token: instructor.youtubeTokens.refreshToken,
-            expiry_date: instructor.youtubeTokens.expiryDate
-        });
-
-        // Refresh if: expiry is missing/zero OR token has expired
-        const needsRefresh = !instructor.youtubeTokens.expiryDate || instructor.youtubeTokens.expiryDate < Date.now();
-        if (needsRefresh) {
-            await refreshAccessToken(oAuth2Client, instructor);
-        }
-
-        const youtube = google.youtube({ version: "v3", auth: oAuth2Client });
-
-        const response = await youtube.videos.insert({
-            part: ["snippet", "status"],
-            requestBody: {
-                snippet: {
-                    title: title || req.file.originalname,
-                    description: description || "",
-                    tags: parsedTags,
-                },
-                status: {
-                    privacyStatus: privacyStatus || "private"
-                }
-            },
-            media: { body: fs.createReadStream(resolvedPath) }
-        });
-
-        cleanup();
-
-        return res.status(201).json({
-            status: "success",
-            message: "Video uploaded successfully to YouTube",
-            videoId: response.data.id,
-            videoUrl: `https://www.youtube.com/watch?v=${response.data.id}`
+        return res.status(202).json({
+            status: "queued",
+            message: "Video upload started. You will be notified when it finishes.",
         });
 
     } catch (error) {
         cleanup();
-        console.error('YouTube upload error --->', (error as Error)?.message ?? error);
+        console.error('YouTube upload enqueue error --->', (error as Error)?.message ?? error);
         res.status(500).json({ status: "failed", message: "Internal server error" });
     }
 };
@@ -206,6 +119,7 @@ const handleYouTubeAuth = async (req: Request, res: Response) => {
             if (instructor && instructor.youtubeTokens) {
                 const hasValidToken = instructor.youtubeTokens.accessToken || instructor.youtubeTokens.refreshToken;
                 if (hasValidToken) {
+                    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
                     return res.status(200).json({
                         status: "success",
                         message: "Already authenticated with YouTube",
@@ -242,9 +156,13 @@ const handleYouTubeAuth = async (req: Request, res: Response) => {
 
 const handleYouTubeCallback = async (req: Request, res: Response) => {
     try {
-        const { code, state } = req.query;
+        const isJsonRequest = req.method === 'POST';
+        const body = (req.body ?? {}) as { code?: unknown; state?: unknown };
 
-        if (!code) {
+        const code = (req.query.code ?? body.code) as string | undefined;
+        const state = (req.query.state ?? body.state) as string | undefined;
+
+        if (!code || typeof code !== 'string') {
             return res.status(400).json({ status: "failed", message: "Authorization code is required" });
         }
         if (!state || typeof state !== 'string') {
@@ -273,6 +191,14 @@ const handleYouTubeCallback = async (req: Request, res: Response) => {
                 expiryDate: tokens.expiry_date
             }
         });
+
+        // JSON response for the frontend callback page (POST)
+        if (isJsonRequest) {
+            return res.status(200).json({
+                status: "success",
+                message: "YouTube authentication successful"
+            });
+        }
 
         // Return HTML to close popup and redirect
         res.send(`

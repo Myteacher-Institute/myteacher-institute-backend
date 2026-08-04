@@ -39,6 +39,14 @@ const transactionSchema = new mongoose.Schema<ITransaction>({
         type: String,
         default: 'flutterwave',
         required: true
+    },
+    affiliateId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'user'
+    },
+    affiliateType: {
+        type: String,
+        enum: ['user', 'instructor']
     }
 }, {
     timestamps: true

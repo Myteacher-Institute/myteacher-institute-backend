@@ -10,6 +10,53 @@ export const courseSchema = new mongoose.Schema<ICourse>({
         type: String,
         required: true
     },
+    chapters: [
+        {
+            title: String,
+            explanation: String,
+            videos: [
+                {
+                    videoUrl: String,
+                    videoTitle: String,
+                    videoDescription: String,
+                    videoDuration: Number,
+                    isProgrammingVideo: Boolean,
+                    isPreview: Boolean
+                }
+            ],
+            programmingCodes: [
+                {
+                    code: String,
+                    language: String,
+                    explanation: String,
+                    fileName: String
+                }
+            ],
+            assets: [
+                {
+                    name: String,
+                    url: String
+                }
+            ],
+            quizzes: [
+                {
+                    title: String,
+                    questions: [
+                        {
+                            question: String,
+                            options: [
+                                {
+                                    option: String,
+                                    isCorrect: Boolean
+                                }
+                            ],
+                            correctAnswer: String
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
     courseVideos: [
         {
             videoUrl: String,

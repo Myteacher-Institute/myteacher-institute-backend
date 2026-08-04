@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { ProtectMiddleWare } from '../middleware/protect-route';
-import { handleCreatePayment, handleVerifyPayment, handleGetUserTransactions, handleGetTransactionByRef } from '../controllers/payment.controller';
+import { handleCreatePayment, handleVerifyPayment, handleGetPaymentStatus, handleGetUserTransactions, handleGetTransactionByRef } from '../controllers/payment.controller';
 import rateLimit from 'express-rate-limit';
 
 const paymentRoute: Router = Router();
@@ -24,6 +24,10 @@ paymentRoute.get('/verify', ProtectMiddleWare, handleVerifyPayment);
 
 // Get user's transaction history (requires authentication)
 paymentRoute.get('/history', ProtectMiddleWare, handleGetUserTransactions);
+
+// Check payment status and reconcile stuck pending payments (requires authentication)
+// Must come before /:tx_ref so it isn't shadowed by the generic route.
+paymentRoute.get('/status/:tx_ref', ProtectMiddleWare, handleGetPaymentStatus);
 
 // Get transaction by reference (requires authentication)
 paymentRoute.get('/:tx_ref', ProtectMiddleWare, handleGetTransactionByRef);

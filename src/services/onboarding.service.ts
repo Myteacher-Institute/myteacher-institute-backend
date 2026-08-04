@@ -3,6 +3,7 @@ import { Request } from 'express';
 
 import { User } from '../models';
 import { generateSession } from './session.service';
+import { ensureAffiliateAccount } from './affiliate.service';
 import logger, { generateJWT, getClientIp } from '../utils';
 import { handleCompleteOnboardingResT } from '../types/auth.types';
 
@@ -61,6 +62,9 @@ export const completeOnboarding = async (
                 },
             }
         );
+
+        // New accounts get an affiliate account right away.
+        await ensureAffiliateAccount(userId, 'user');
 
         const updatedUser = await User.findById(userId);
 

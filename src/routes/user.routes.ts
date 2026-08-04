@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import {ProtectMiddleWare} from "../middleware/protect-route";
 import { handleEditUserProfile, handleGetUserProfile } from '../controllers/user.controller';
+import { handleUploadUserProfilePicture } from '../controllers/profile-picture.controller';
+import { profileUpload } from '../config/profile-upload';
 
 import rateLimit from "express-rate-limit";
 
@@ -18,7 +20,9 @@ const generalLimiter = rateLimit({
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
+userRouter.get('/me', generalLimiter, handleGetUserProfile);
 userRouter.get('/profile', generalLimiter, handleGetUserProfile);
 userRouter.patch('/profile', generalLimiter, handleEditUserProfile);
+userRouter.post('/profile-picture', generalLimiter, profileUpload.single('profilePicture'), handleUploadUserProfilePicture);
 
 export default userRouter;

@@ -130,6 +130,59 @@ export const sendResetPasswordEmail = async (email: string, resetLink: string) =
   }
 };
 
+export const sendCoursePurchaseEmail = async (data: {
+    email: string;
+    name: string;
+    courseName: string;
+    amount: number;
+    currency: string;
+    transactionReference: string;
+}) => {
+    try {
+        const dashboardUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/student`;
+
+        const mailOptions = {
+            from: process.env.GMAIL_EMAIL,
+            to: data.email,
+            subject: `Purchase Confirmed: ${data.courseName}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <img src="cid:logo" alt="Logo" style="max-width: 150px;" />
+                    </div>
+                    <h2 style="color: #333;">Payment Confirmed</h2>
+                    <p style="color: #666;">Hello ${data.name},</p>
+                    <p style="color: #666;">Thank you for your purchase. Your payment has been confirmed and you now have full access to your course.</p>
+                    <div style="background-color: #f5f5f5; padding: 24px; margin: 24px 0; border-radius: 8px;">
+                        <p style="margin: 0 0 6px; font-size: 18px; font-weight: bold; color: #333;">${data.courseName}</p>
+                        <p style="margin: 0 0 4px; color: #666;">Amount paid: <strong>${data.currency} ${data.amount}</strong></p>
+                        <p style="margin: 0; color: #999; font-size: 12px;">Transaction Reference: ${data.transactionReference}</p>
+                    </div>
+                    <p style="color: #666;">Start learning right away from your dashboard.</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${dashboardUrl}" style="background-color: #223D85; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Go to My Dashboard</a>
+                    </div>
+                    <p style="color: #999; font-size: 12px;">If you didn't make this purchase, please contact support immediately.</p>
+                </div>
+            `,
+            attachments: [
+                {
+                    filename: 'logo.png',
+                    content: logoBuffer,
+                    cid: 'logo',
+                },
+            ],
+        };
+
+        await transporter.sendMail(mailOptions);
+        logger.info(`Course purchase email sent successfully to ${data.email}`);
+        return 'success';
+    } catch (error) {
+        logger.error(`Error in sendCoursePurchaseEmail: ${(error as Error)?.message ?? error}`);
+        return 'error';
+    }
+};
+
 export const sendInstructorApplicationEmail = async (instructorData: { name: string; email: string; phone: string }) => {
   try {
     const mailOptions = {

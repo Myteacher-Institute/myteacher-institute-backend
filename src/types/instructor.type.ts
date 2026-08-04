@@ -30,6 +30,7 @@ export interface IInstructor extends mongoose.Document {
     lastSeen?: Date;
     socketId?: string;
     affiliate_id?: string;
+    hasAffiliateAccount?: boolean;
     affiliate_money?: number;
     googleId?: string;
 }

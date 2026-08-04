@@ -1,10 +1,30 @@
 import { Request, Response } from "express";
 import { google } from "googleapis";
 import multer from "multer";
-import { Readable } from "stream";
+import path from "path";
+import fs from "fs";
 import { Instructor } from "../models/instructor.model";
+import { enqueueDriveUpload } from "../queues";
+import type { DriveUploadJob } from "../queues/types";
 
-const upload = multer({ storage: multer.memoryStorage() });
+// Allowed base directory for uploaded assets — must match the multer destination
+const ALLOWED_ASSET_DIR = path.resolve(
+    process.env.ASSET_UPLOAD_DIR || path.join(process.cwd(), 'uploads', 'assets')
+);
+
+if (!fs.existsSync(ALLOWED_ASSET_DIR)) {
+    fs.mkdirSync(ALLOWED_ASSET_DIR, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, ALLOWED_ASSET_DIR),
+    filename: (_req, file, cb) => {
+        const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+        cb(null, `${unique}${path.extname(file.originalname)}`);
+    },
+});
+
+const upload = multer({ storage });
 
 const handleDriveAuth = async (req: Request, res: Response) => {
     try {
@@ -16,6 +36,8 @@ const handleDriveAuth = async (req: Request, res: Response) => {
                 message: "Unauthorized: Instructor ID not found"
             });
         }
+
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
 
         const instructor = await Instructor.findById(instructorId);
         if (instructor && instructor.driveTokens) {
@@ -175,13 +197,26 @@ const handleDriveCallback = async (req: Request, res: Response) => {
     }
 };
 
+// Enqueue the upload and return immediately (202). The actual Drive upload
+// runs on a BullMQ worker and reports progress/completion over the socket.
 const handleDriveUpload = async (req: Request, res: Response) => {
+    const uploadedFilePath = req.file?.path;
+
+    const cleanup = () => {
+        // Delete the temp file if we fail before it is enqueued.
+        // Once enqueued, the worker owns cleanup.
+        if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+            fs.unlink(uploadedFilePath, () => {});
+        }
+    };
+
     try {
         const instructorId = req.userId;
         const { name } = req.body;
         const file = req.file;
 
         if (!instructorId) {
+            cleanup();
             return res.status(401).json({
                 status: "failed",
                 message: "Unauthorized: Instructor ID not found"
@@ -195,80 +230,43 @@ const handleDriveUpload = async (req: Request, res: Response) => {
             });
         }
 
-        const instructor = await Instructor.findById(instructorId);
-        if (!instructor || !instructor.driveTokens) {
-            return res.status(400).json({
-                status: "failed",
-                message: "Google Drive authentication required. Please authenticate first."
-            });
+        // Verify the file path is inside the allowed upload directory
+        const resolvedPath = path.resolve(file.path);
+        if (!resolvedPath.startsWith(ALLOWED_ASSET_DIR + path.sep)) {
+            console.error('Drive upload error: Invalid file path', { resolvedPath, ALLOWED_ASSET_DIR });
+            cleanup();
+            return res.status(400).json({ status: "failed", message: "Invalid file path" });
         }
 
-        const clientId = process.env.GOOGLE_DRIVE_CLIENT_ID;
-        const clientSecret = process.env.GOOGLE_DRIVE_CLIENT_SECRET;
-        const redirectUri = process.env.GOOGLE_DRIVE_REDIRECT_URI;
-
-        if (!clientId || !clientSecret || !redirectUri) {
-            return res.status(500).json({
-                status: "failed",
-                message: "Google Drive credentials not configured"
-            });
-        }
-
-        const oauth2Client = new google.auth.OAuth2(
-            clientId,
-            clientSecret,
-            redirectUri
-        );
-
-        oauth2Client.setCredentials({
-            access_token: instructor.driveTokens.accessToken,
-            refresh_token: instructor.driveTokens.refreshToken
-        });
-
-        // Check if token needs refresh
-        if (instructor.driveTokens.expiryDate && Date.now() > instructor.driveTokens.expiryDate) {
-            const { credentials } = await oauth2Client.refreshAccessToken();
-            if (credentials.access_token) {
-                instructor.driveTokens.accessToken = credentials.access_token;
-                if (credentials.expiry_date) {
-                    instructor.driveTokens.expiryDate = typeof credentials.expiry_date === 'number' ? credentials.expiry_date : Date.parse(String(credentials.expiry_date));
-                }
-                await instructor.save();
+        const clientAssetIndex = (() => {
+            const raw = req.body.clientAssetIndex;
+            if (typeof raw === 'number') return raw;
+            if (typeof raw === 'string' && raw.trim() !== '') {
+                const parsed = Number(raw);
+                return Number.isNaN(parsed) ? undefined : parsed;
             }
-        }
+            return undefined;
+        })();
 
-        const drive = google.drive({ version: "v3", auth: oauth2Client });
-
-        const fileMetadata = {
+        const job: DriveUploadJob = {
+            instructorId,
+            filePath: resolvedPath,
+            originalName: file.originalname,
             name: name || file.originalname,
-        };
-
-        const media = {
             mimeType: file.mimetype,
-            body: Readable.from(file.buffer),
+            clientAssetIndex,
         };
 
-        const response = await drive.files.create({
-            requestBody: fileMetadata,
-            media: media,
-            fields: "id,webViewLink",
-        });
+        // Enqueue — the worker owns the file from here on
+        await enqueueDriveUpload(job);
 
-        if (response.data) {
-            return res.status(200).json({
-                status: "success",
-                message: "File uploaded to Google Drive successfully",
-                url: response.data.webViewLink || `https://drive.google.com/file/d/${response.data.id}/view`,
-                fileId: response.data.id
-            });
-        } else {
-            return res.status(500).json({
-                status: "failed",
-                message: "Failed to upload file to Google Drive"
-            });
-        }
+        return res.status(202).json({
+            status: "queued",
+            message: "File upload started. You will be notified when it finishes.",
+        });
     } catch (error) {
-        console.error('Google Drive upload error --->', (error as Error)?.message ?? error);
+        cleanup();
+        console.error('Drive upload enqueue error --->', (error as Error)?.message ?? error);
         res.status(500).json({
             status: "failed",
             message: "Internal server error during Google Drive upload"

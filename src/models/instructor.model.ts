@@ -62,6 +62,10 @@ const instructorSchema = new Schema<IInstructor>({
         unique: true,
         sparse: true
     },
+    hasAffiliateAccount: {
+        type: Boolean,
+        default: false
+    },
     affiliate_money: {
         type: Number,
         default: 0

@@ -4,6 +4,7 @@ import { Request } from 'express';
 import { User, Otp, Session } from '../models';
 import { generateSession } from './session.service';
 import { sendResetPasswordEmail } from './email.service';
+import { ensureAffiliateAccount } from './affiliate.service';
 import logger, { generateJWT, getClientIp, getHandleVerifyOtpSuccessMessage, sanitizeString } from '../utils';
 
 import {
@@ -62,6 +63,11 @@ export const verifyOtp = async (
     }
 
     if (findOtp.useCase === 'onboarded-account') {
+      // Auto-create the affiliate account for normal users on every login.
+      if (findUser.role !== 'instructor' && findUser.role !== 'admin') {
+        await ensureAffiliateAccount(findUser._id.toString(), 'user');
+      }
+
       const sessionRes = await generateSession({ ip, userAgent, userId: findUser._id.toString() });
 
       if (!sessionRes.isSuccessful) {
@@ -89,6 +95,9 @@ export const verifyOtp = async (
       // Ensure online status fields exist
       const { ensureOnlineStatusFields } = await import('./user-status.service');
       await ensureOnlineStatusFields(findUser._id.toString(), 'user');
+      
+      // Auto-create the affiliate account for normal users on every login.
+      await ensureAffiliateAccount(findUser._id.toString(), 'user');
       
       // Set user as online
       await User.updateOne(

@@ -1,5 +1,5 @@
 import express, { Router } from 'express';
-import { activateAffiliateAccount, generateAffiliateLink, getAffiliateStats } from '../controllers/affiliate.controller';
+import { activateAffiliateAccount, generateAffiliateLink, getAffiliateStats, getAffiliateStatus } from '../controllers/affiliate.controller';
 import { ProtectMiddleWare } from '../middleware/protect-route';
 import rateLimit from "express-rate-limit";
 
@@ -20,6 +20,9 @@ const generalLimiter = rateLimit({
 
 // Activate affiliate account
 router.post('/activate', activateAffiliateAccount);
+
+// Get affiliate status for the authenticated account
+router.get('/status', getAffiliateStatus);
 
 // Generate affiliate link for a course
 router.post('/generate-link', generateAffiliateLink);

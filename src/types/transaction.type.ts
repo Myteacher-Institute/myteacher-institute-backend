@@ -9,6 +9,8 @@ export interface ITransaction extends mongoose.Document {
     transactionReference: string;
     flutterwaveTransactionId?: string;
     paymentMethod: string;
+    affiliateId?: mongoose.Types.ObjectId;
+    affiliateType?: 'user' | 'instructor';
     createdAt: Date;
     updatedAt: Date;
 }
@@ -19,6 +21,7 @@ export type CreatePaymentReqBody = {
     currency?: string;
     paymentMethod?: string;
     redirectUrl?: string;
+    affiliateId?: string;
 }
 
 export type CreatePaymentResT = {

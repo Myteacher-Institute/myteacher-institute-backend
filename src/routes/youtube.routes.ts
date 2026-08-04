@@ -54,6 +54,7 @@ youtubeRoute.get("/auth", ProtectMiddleWare, handleYouTubeAuth);
 
 // Handle OAuth callback from Google (no auth required - this is the OAuth callback)
 youtubeRoute.get("/callback", handleYouTubeCallback);
+youtubeRoute.post("/callback", handleYouTubeCallback);
 
 // Upload video to YouTube (requires authentication)
 // multer parses the multipart/form-data and puts the file in req.file

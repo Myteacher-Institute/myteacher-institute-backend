@@ -22,7 +22,7 @@ export interface IUser extends mongoose.Document {
     googleId?: string;
 }
 
-import { ICourse, AddCourseReqBody, AddCourseResT, FetchCoursesByUserReqBody, FetchCoursesByUserResT, FetchAllCoursesResT, EditCourseReqBody, EditCourseResT, FetchCourseByIdResT } from './course.type';
+import { ICourse, AddCourseReqBody, AddCourseResT, FetchCoursesByUserReqBody, FetchCoursesByUserResT, FetchAllCoursesResT, BrowseCoursesResT, EditCourseReqBody, EditCourseResT, FetchCourseByIdResT, CoursePreviewResT } from './course.type';
 
 import { IAdmin, AddAdminReqBody, AddAdminResT, AdminLoginReqBody, AdminLoginResT, VerifyAdminOtpReqBody, VerifyAdminOtpResT, ResendAdminOtpReqBody, ResendAdminOtpResT, SendAdminResetCodeReqBody, SendAdminResetCodeResT, ResetAdminPasswordReqBody, ResetAdminPasswordResT } from './admin.type';
 
@@ -31,6 +31,8 @@ import { FetchInstructorStudentsResT, AppliedUser, CourseWithStudents } from './
 import { FetchInstructorEarningsResT, CourseEarnings, EarningsData } from './instructor-earnings.type';
 
 import { EditInstructorProfileReqBody, EditInstructorProfileResT, SendDeleteAccountOTPReqBody, SendDeleteAccountOTPResT, VerifyDeleteAccountOTPReqBody, DeleteInstructorAccountResT, ReportBugReqBody, ReportBugResT } from './instructor-settings.type';
+
+import { ICompanyMoney } from './company-money.type';
 
 
 
@@ -66,9 +68,11 @@ export type {
     FetchCoursesByUserReqBody,
     FetchCoursesByUserResT,
     FetchAllCoursesResT,
+    BrowseCoursesResT,
     EditCourseReqBody,
     EditCourseResT,
     FetchCourseByIdResT,
+    CoursePreviewResT,
     IAdmin,
     AddAdminReqBody,
     AddAdminResT,
@@ -95,5 +99,6 @@ export type {
     VerifyDeleteAccountOTPReqBody,
     DeleteInstructorAccountResT,
     ReportBugReqBody,
-    ReportBugResT
+    ReportBugResT,
+    ICompanyMoney
 };

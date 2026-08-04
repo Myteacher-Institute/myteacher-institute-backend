@@ -1,7 +1,8 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { handleAuthenticateUser, handleVerifyOtp, handleCheckUserExists, handleRegisterUser, handleResendOtp, handleSendResetInstructions, handleResetPasswordWithCode, handleGetAccessToken, handleLogout, handleLogoutAllDevices, handleGoogleCallback } from "../controllers/auth.controller";
 import { ProtectMiddleWare } from "../middleware/protect-route";
 import passport from "../config/google.config";
+import logger from "../utils";
 
 // Import rate limiter correctly
 import rateLimit from "express-rate-limit";
@@ -62,7 +63,23 @@ authRoute.post("/logout", generalLimiter, handleLogout);
 // authRoute.post("/logout-all-devices", generalLimiter, ProtectMiddleWare, handleLogoutAllDevices);
 
 // Google OAuth routes
-authRoute.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
-authRoute.get("/google/callback", passport.authenticate("google", { failureRedirect: "/get-started?error=google-failed" }), handleGoogleCallback);
+const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
+
+authRoute.get("/google", passport.authenticate("google", { session: false, scope: ["profile", "email"] }));
+authRoute.get(
+  "/google/callback",
+  passport.authenticate("google", {
+    session: false,
+    failureRedirect: `${FRONTEND_BASE_URL}/get-started?error=google-failed`,
+  }),
+  async (req: Request, res: Response) => {
+    try {
+      await handleGoogleCallback(req, res);
+    } catch (error) {
+      logger.error(`Error on @googleCallback route: ${(error as Error)?.message ?? error}`);
+      res.redirect(`${FRONTEND_BASE_URL}/get-started?error=google-auth-failed`);
+    }
+  }
+);
 
 export default authRoute;

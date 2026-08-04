@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import User from '../models/user.model';
+import { User, Instructor, Admin } from '../models';
 
 interface EditUserProfileReqBody {
   name?: string;
@@ -25,25 +25,10 @@ export const handleEditUserProfile = async (
       return res.status(401).json({ status: 'failed', message: 'Unauthorized' });
     }
 
-    const { name, email, phone, bio, expertise, profilePicture } = req.body;
+    const { name, email, phone, bio, expertise } = req.body;
 
-    // Validate profilePicture if provided
-    if (profilePicture) {
-      // Check if it's a valid base64 string
-      if (!profilePicture.startsWith('data:image/')) {
-        return res.status(400).json({ status: 'failed', message: 'Invalid image format' });
-      }
-
-      // Extract the base64 part and calculate size
-      const base64Data = profilePicture.split(',')[1];
-      const sizeInBytes = Buffer.byteLength(base64Data, 'base64');
-      const sizeInMB = sizeInBytes / (1024 * 1024);
-
-      // Check if file size exceeds 6MB
-      if (sizeInMB > 6) {
-        return res.status(400).json({ status: 'failed', message: 'Image size must not exceed 6MB' });
-      }
-    }
+    // Note: profilePicture is intentionally NOT handled here. It goes through
+    // the dedicated profile-picture upload route so base64 never travels in JSON.
 
     // Find and update user
     const user = await User.findById(req.userId);
@@ -57,7 +42,6 @@ export const handleEditUserProfile = async (
     if (phone !== undefined) user.phone = phone;
     if (bio !== undefined) (user as any).bio = bio;
     if (expertise !== undefined) (user as any).expertise = expertise;
-    if (profilePicture !== undefined) user.profilePicture = profilePicture;
 
     await user.save();
 
@@ -85,7 +69,10 @@ export const handleGetUserProfile = async (
       return res.status(401).json({ status: 'failed', message: 'Unauthorized' });
     }
 
-    const user = await User.findById(req.userId);
+    const user =
+      (await User.findById(req.userId)) ||
+      (await Instructor.findById(req.userId)) ||
+      (await Admin.findById(req.userId));
     if (!user) {
       return res.status(404).json({ status: 'failed', message: 'User not found' });
     }

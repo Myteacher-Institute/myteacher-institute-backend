@@ -37,6 +37,12 @@ import {
     handleReportBug
 } from "../controllers/instructor-settings.controller";
 
+import {
+    handleUploadInstructorProfilePicture
+} from "../controllers/profile-picture.controller";
+
+import { profileUpload } from "../config/profile-upload";
+
 import { ProtectMiddleWare } from "../middleware/protect-route";
 import { isAdmin } from "../middleware/is-admin";
 import rateLimit from "express-rate-limit";
@@ -109,6 +115,7 @@ router.post("/reset-password", passwordResetLimiter, handleResetPassword);
 router.get("/students", ProtectMiddleWare, handleFetchInstructorStudents);
 router.get("/earnings", ProtectMiddleWare, handleFetchInstructorEarnings);
 router.patch("/profile", ProtectMiddleWare, handleEditInstructorProfile);
+router.post("/profile-picture", ProtectMiddleWare, profileUpload.single("profilePicture"), handleUploadInstructorProfilePicture);
 router.post("/account/send-delete-otp", ProtectMiddleWare, handleSendDeleteAccountOTP);
 router.delete("/account", ProtectMiddleWare, handleDeleteInstructorAccount);
 router.post("/report-bug", ProtectMiddleWare, handleReportBug);

@@ -86,6 +86,41 @@ export const verifyTransaction = async (transactionId: string): Promise<Flutterw
 };
 
 /**
+ * Verify a transaction with Flutterwave using the transaction reference.
+ * Used to reconcile "stuck" pending payments where we never received the
+ * Flutterwave transaction id (e.g. the user never landed back on the callback).
+ */
+export const verifyTransactionByReference = async (txRef: string): Promise<FlutterwaveVerifyResponse> => {
+    try {
+        // Use Flutterwave SDK for transaction verification by reference
+        const response = await (flw.Transaction as any).verify_by_tx({ tx_ref: txRef });
+
+        return {
+            status: response.status || 'success',
+            message: response.message || 'Transaction verified successfully',
+            data: {
+                status: response.data?.status || 'unknown',
+                amount: response.data?.amount || 0,
+                currency: response.data?.currency || 'NGN',
+                tx_ref: response.data?.tx_ref || '',
+                transaction_id: response.data?.id || 0,
+                flw_ref: response.data?.flw_ref || '',
+                customer: {
+                    email: response.data?.customer?.email || '',
+                    name: response.data?.customer?.name || ''
+                },
+                meta: {
+                    authorizer: response.data?.meta?.authorizer || ''
+                }
+            }
+        };
+    } catch (error) {
+        console.error('Flutterwave verify transaction by reference error:', error);
+        throw error;
+    }
+};
+
+/**
  * Generate a unique transaction reference
  */
 export const generateTransactionReference = (userId: string, courseId: string): string => {
