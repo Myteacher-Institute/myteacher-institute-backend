@@ -7,9 +7,15 @@ const transactionSchema = new mongoose.Schema<ITransaction>({
         ref: 'user',
         required: true
     },
+    // Optional since a transaction may also be for a mentorship payment
     courseId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Course',
+        ref: 'Course'
+    },
+    purpose: {
+        type: String,
+        enum: ['course', 'mentorship'],
+        default: 'course',
         required: true
     },
     amount: {

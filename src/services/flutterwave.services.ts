@@ -3,10 +3,13 @@ import { FlutterwavePaymentResponse, FlutterwaveVerifyResponse } from '../types/
 import Flutterwave from 'flutterwave-node-v3';
 
 // Initialize Flutterwave instance
-const flw = new Flutterwave(config.flutterwave.clientId, config.flutterwave.clientSecret);
+const flw = new Flutterwave(
+    config.flutterwave.clientId || '',
+    config.flutterwave.clientSecret || ''
+);
 
 /**
- * Create a payment link with Flutterwave using SDK
+ * Create a payment link with Flutterwave using direct API call
  */
 export const createPaymentLink = async (params: {
     amount: number;
@@ -35,19 +38,30 @@ export const createPaymentLink = async (params: {
             }
         };
 
-        // Use Flutterwave SDK for payment link creation
-        const response = await flw.PaymentLink.create(payload);
+        const response = await fetch('https://api.flutterwave.com/v3/payments', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${config.flutterwave.clientSecret}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data: any = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to create payment link');
+        }
 
         return {
-            status: response.status || 'success',
-            message: response.message || 'Payment link created successfully',
+            status: data.status || 'success',
+            message: data.message || 'Payment link created successfully',
             data: {
-                link: response.data?.link || '',
-                redirect_url: response.data?.redirect_url || ''
+                link: data.data?.link || '',
+                redirect_url: data.data?.redirect_url || ''
             }
         };
     } catch (error) {
-        console.error('Flutterwave create payment error:', error);
         throw error;
     }
 };
@@ -57,7 +71,6 @@ export const createPaymentLink = async (params: {
  */
 export const verifyTransaction = async (transactionId: string): Promise<FlutterwaveVerifyResponse> => {
     try {
-        // Use Flutterwave SDK for transaction verification
         const response = await flw.Transaction.verify({ id: transactionId });
 
         return {
@@ -80,7 +93,6 @@ export const verifyTransaction = async (transactionId: string): Promise<Flutterw
             }
         };
     } catch (error) {
-        console.error('Flutterwave verify transaction error:', error);
         throw error;
     }
 };
@@ -92,7 +104,6 @@ export const verifyTransaction = async (transactionId: string): Promise<Flutterw
  */
 export const verifyTransactionByReference = async (txRef: string): Promise<FlutterwaveVerifyResponse> => {
     try {
-        // Use Flutterwave SDK for transaction verification by reference
         const response = await (flw.Transaction as any).verify_by_tx({ tx_ref: txRef });
 
         return {
@@ -115,7 +126,6 @@ export const verifyTransactionByReference = async (txRef: string): Promise<Flutt
             }
         };
     } catch (error) {
-        console.error('Flutterwave verify transaction by reference error:', error);
         throw error;
     }
 };
@@ -141,13 +151,10 @@ export const encryptData = (data: string): string => {
             throw new Error('Flutterwave encryption key is not configured');
         }
 
-        // Flutterwave expects the encryption key to be used for encrypting sensitive data
-        // The SDK provides built-in encryption utilities
         const encrypted = flw.Encrypt.encryptData(data, encryptionKey);
         
         return encrypted;
     } catch (error) {
-        console.error('Encryption error:', error);
         throw new Error('Failed to encrypt data');
     }
 };
@@ -164,12 +171,10 @@ export const decryptData = (encryptedData: string): string => {
             throw new Error('Flutterwave encryption key is not configured');
         }
 
-        // Decrypt the data using Flutterwave's encryption key
         const decrypted = flw.Encrypt.decryptData(encryptedData, encryptionKey);
         
         return decrypted;
     } catch (error) {
-        console.error('Decryption error:', error);
         throw new Error('Failed to decrypt data');
     }
 };

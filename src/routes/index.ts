@@ -9,3 +9,5 @@ export { default as notificationRouter } from './notification.routes';
 export { default as driveRouter } from './drive.routes';
 export { default as userRouter } from './user.routes';
 export { default as affiliateRouter } from './affiliate.routes';
+export { default as studentRouter } from './student.routes';
+export { default as mentorRouter } from './mentor.routes';

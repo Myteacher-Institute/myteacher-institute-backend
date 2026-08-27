@@ -1,9 +1,10 @@
 import createApp from './app';
 import config from './config/env';
 import { connectDB } from './config/database';
-import { initializeSocket } from './config/socket';
+import { initializeSocket, attachSocketEmitBridge } from './config/socket';
 import { createServer } from 'http';
 import { startQueues } from './queues';
+import { resumeInterruptedCourseCreations } from './services/course-creation.service';
 
 const startServer = async (): Promise<void> => {
     try {
@@ -22,8 +23,14 @@ const startServer = async (): Promise<void> => {
         // Initialize Socket.io
         initializeSocket(httpServer);
 
+        // Relay progress events from the standalone queue worker process (if any)
+        await attachSocketEmitBridge();
+
         // Initialize upload queues (BullMQ + Redis, or in-process fallback)
         await startQueues();
+
+        // Re-queue any course creations interrupted by a restart (persisted in Mongo)
+        await resumeInterruptedCourseCreations();
 
         // Add health check endpoint
         app.get('/health', (req, res) => {

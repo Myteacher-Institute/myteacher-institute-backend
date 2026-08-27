@@ -131,3 +131,85 @@ export const cacheDelPattern = async (pattern: string): Promise<void> => {
 };
 
 export const REDIS_URL_STR = REDIS_URL;
+
+// ── Socket emit bridge (separate worker process → API → Socket.io) ──────────
+// The standalone queue worker streams uploads in its own process and cannot
+// hold the Socket.io server. It publishes progress/done events to Redis; the
+// API process subscribes and re-emits them on the user's socket room.
+
+const SOCKET_EMIT_CHANNEL = 'socketio:emit';
+
+let socketEmitPublisher: IORedis | null = null;
+let socketEmitPublisherProbed = false;
+
+const ensureSocketEmitPublisher = async (): Promise<IORedis | null> => {
+    if (socketEmitPublisher) return socketEmitPublisher;
+    if (socketEmitPublisherProbed) return null;
+    socketEmitPublisherProbed = true;
+
+    const conn = new IORedis(REDIS_URL, {
+        lazyConnect: true,
+        connectTimeout: 1500,
+        enableOfflineQueue: false,
+        maxRetriesPerRequest: 1,
+        retryStrategy: (times) => (times > 2 ? null : 250),
+    });
+
+    try {
+        await conn.connect();
+        await conn.ping();
+        socketEmitPublisher = conn;
+        return conn;
+    } catch {
+        socketEmitPublisher = null;
+        return null;
+    }
+};
+
+export const publishSocketEmit = async (payload: { userId: string; event: string; data: unknown }): Promise<void> => {
+    try {
+        const conn = await ensureSocketEmitPublisher();
+        if (!conn) return;
+        await conn.publish(SOCKET_EMIT_CHANNEL, JSON.stringify(payload));
+    } catch {
+        // best-effort only
+    }
+};
+
+let socketEmitSubscriber: IORedis | null = null;
+let socketEmitSubscriberProbed = false;
+
+export const subscribeSocketEmits = async (
+    handler: (payload: { userId: string; event: string; data: unknown }) => void
+): Promise<() => void> => {
+    if (socketEmitSubscriberProbed) return () => {};
+    socketEmitSubscriberProbed = true;
+
+    const conn = new IORedis(REDIS_URL, {
+        lazyConnect: true,
+        connectTimeout: 1500,
+        enableOfflineQueue: false,
+        maxRetriesPerRequest: 1,
+        retryStrategy: (times) => (times > 2 ? null : 250),
+    });
+
+    try {
+        await conn.connect();
+        await conn.subscribe(SOCKET_EMIT_CHANNEL);
+        conn.on('message', (channel, message) => {
+            if (channel !== SOCKET_EMIT_CHANNEL) return;
+            try {
+                handler(JSON.parse(message));
+            } catch {
+                // malformed message — ignore
+            }
+        });
+        socketEmitSubscriber = conn;
+        return () => {
+            conn.unsubscribe(SOCKET_EMIT_CHANNEL).catch(() => {});
+            conn.disconnect();
+        };
+    } catch {
+        return () => {};
+    }
+};

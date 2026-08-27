@@ -2,6 +2,7 @@ import { Router } from "express";
 import { isInstructor } from "../middleware/is-instructor";
 import { ProtectMiddleWare } from "../middleware/protect-route";
 import { handleAddCourse, handleCourseEdit, handleFetchCourseById, handleFetchCoursePreview, handleFetchCoursesByAppliedUser, handleFetchAllCourses, handleBrowseCourses, handleFetchCoursesByInstructor, handleDeleteCourse, handleRetryDeletion, handleDeleteOnly, handleAddRating, handleInstructorStatistics } from "../controllers/course.controller";
+import { handleCreateCourseCreation, handleCreateCourseEdit, handleFetchActiveCourseCreations, upload as courseCreationUpload } from "../controllers/course-creation.controller";
 import rateLimit from "express-rate-limit";
 
 const courseRouter: Router = Router();
@@ -19,6 +20,19 @@ const courseOperationLimiter = rateLimit({
 
 // Add course (instructor only)
 courseRouter.post("/add", ProtectMiddleWare, isInstructor, courseOperationLimiter, handleAddCourse);
+
+// Start a background, resumable course creation job (instructor only). Accepts
+// one multipart form: metadata JSON + all video/asset files. Must come before
+// the GET /:courseId catch-all.
+courseRouter.post("/creation", ProtectMiddleWare, isInstructor, courseCreationUpload.any(), handleCreateCourseCreation);
+
+// Fetch the instructor's in-progress course creations (dashboard status card).
+courseRouter.get("/creation/active", ProtectMiddleWare, isInstructor, handleFetchActiveCourseCreations);
+
+// Start a background, resumable course edit job (instructor only). Accepts one
+// multipart form: metadata JSON + only the NEW video/asset files. Must come
+// before the GET /:courseId catch-all.
+courseRouter.post("/edit-job/:courseId", ProtectMiddleWare, isInstructor, courseCreationUpload.any(), handleCreateCourseEdit);
 
 // Edit course (instructor only)
 courseRouter.put("/edit/:courseId", ProtectMiddleWare, isInstructor, courseOperationLimiter, handleCourseEdit);

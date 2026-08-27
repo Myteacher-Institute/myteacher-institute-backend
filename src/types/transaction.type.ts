@@ -2,7 +2,8 @@ import mongoose from 'mongoose';
 
 export interface ITransaction extends mongoose.Document {
     userId: mongoose.Types.ObjectId;
-    courseId: mongoose.Types.ObjectId;
+    courseId?: mongoose.Types.ObjectId;
+    purpose: 'course' | 'mentorship';
     amount: number;
     currency: string;
     status: 'pending' | 'successful' | 'failed' | 'cancelled';

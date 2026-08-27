@@ -115,7 +115,27 @@ export const getIO = (): SocketIOServer => {
   return io;
 };
 
+/**
+ * API process only — subscribe to socket-emit messages published by the
+ * standalone queue worker process and re-emit them on the user's room.
+ */
+export const attachSocketEmitBridge = async (): Promise<void> => {
+  if (process.env.QUEUE_WORKER === 'true') return;
+  const { subscribeSocketEmits } = await import('./redis');
+  await subscribeSocketEmits(({ userId, event, data }) => {
+    if (!io) return;
+    io.to(`user:${userId}`).emit(event, data);
+  });
+};
+
 export const emitToUser = (userId: string, event: string, data: any): void => {
+  // Standalone queue worker: no Socket.io server here, so relay through
+  // Redis; the API process subscribes and re-emits on the user's room.
+  if (process.env.QUEUE_WORKER === 'true') {
+    const { publishSocketEmit } = require('./redis');
+    publishSocketEmit({ userId, event, data }).catch(() => {});
+    return;
+  }
   if (!io) return;
   io.to(`user:${userId}`).emit(event, data);
 };

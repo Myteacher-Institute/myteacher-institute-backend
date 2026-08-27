@@ -5,6 +5,7 @@ import { google } from "googleapis";
 import { Instructor } from "../models/instructor.model";
 import { emitToUser } from "../config/socket";
 import type { DriveUploadJob } from "../queues/types";
+import { recordDriveResult, failCourseCreation, trackCourseCreationUploadProgress } from "../services/course-creation.service";
 
 const ALLOWED_ASSET_DIR = path.resolve(
     process.env.ASSET_UPLOAD_DIR || path.join(process.cwd(), 'uploads', 'assets')
@@ -62,7 +63,13 @@ const getDriveCredentials = () => {
 };
 
 export const processDriveUpload = async (job: DriveUploadJob): Promise<void> => {
-    const { instructorId, filePath, name, mimeType, clientAssetIndex } = job;
+    const { instructorId, filePath, name, mimeType, clientAssetIndex, courseCreationJobId } = job;
+
+    const trackProgress = (percent: number | undefined) => {
+        if (courseCreationJobId && typeof percent === 'number') {
+            trackCourseCreationUploadProgress(courseCreationJobId, percent).catch(() => {});
+        }
+    };
 
     const cleanup = () => {
         if (filePath && fs.existsSync(filePath)) {
@@ -116,10 +123,12 @@ export const processDriveUpload = async (job: DriveUploadJob): Promise<void> => 
         const drive = google.drive({ version: "v3", auth: oauth2Client });
 
         emitProgress(instructorId, clientAssetIndex, 'preparing', 0);
+        trackProgress(0);
 
         const totalBytes = fs.statSync(resolvedPath).size;
         let uploadedBytes = 0;
         let lastEmittedPercent = -1;
+        let lastTrackedPercent = -1;
         const progressStream = new Transform({
             transform(chunk: Buffer, _encoding, callback) {
                 uploadedBytes += chunk.length;
@@ -127,6 +136,10 @@ export const processDriveUpload = async (job: DriveUploadJob): Promise<void> => 
                 if (pct !== lastEmittedPercent) {
                     lastEmittedPercent = pct;
                     emitProgress(instructorId, clientAssetIndex, 'uploading', pct);
+                }
+                if (courseCreationJobId && pct - lastTrackedPercent >= 5) {
+                    lastTrackedPercent = pct;
+                    trackProgress(pct);
                 }
                 callback(null, chunk);
             }
@@ -142,14 +155,25 @@ export const processDriveUpload = async (job: DriveUploadJob): Promise<void> => 
             fields: "id,webViewLink",
         });
 
+        const url = response.data.webViewLink || `https://drive.google.com/file/d/${response.data.id}/view`;
+
+        // Persist the finished URL into the durable course-creation job BEFORE
+        // cleanup, so a crash between upload-success and cleanup never loses it.
+        if (courseCreationJobId && typeof clientAssetIndex === 'number') {
+            await recordDriveResult(courseCreationJobId, clientAssetIndex, url, response.data.id || undefined);
+        }
+
         cleanup();
 
-        const url = response.data.webViewLink || `https://drive.google.com/file/d/${response.data.id}/view`;
         emitProgress(instructorId, clientAssetIndex, 'done', 100);
         emitDone(instructorId, clientAssetIndex, url, response.data.id || '');
     } catch (error) {
         cleanup();
         console.error('Drive upload error --->', (error as Error)?.message ?? error);
-        emitFailed(instructorId, clientAssetIndex, (error as Error)?.message ?? "Failed to upload file to Google Drive");
+        const message = (error as Error)?.message ?? "Failed to upload file to Google Drive";
+        if (courseCreationJobId) {
+            await failCourseCreation(courseCreationJobId, message);
+        }
+        emitFailed(instructorId, clientAssetIndex, message);
     }
 };

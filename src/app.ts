@@ -1,5 +1,5 @@
 import cors from 'cors';
-import { adminRouter, authRouter, courseRouter, paymentRouter, youtubeRouter, instructorRouter, driveRouter, userRouter, affiliateRouter } from './routes';
+import { adminRouter, authRouter, courseRouter, paymentRouter, youtubeRouter, instructorRouter, driveRouter, userRouter, affiliateRouter, studentRouter, notificationRouter, mentorRouter } from './routes';
 import path from 'path';
 import { configureScalarDocs } from './config/scalar';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
@@ -41,6 +41,9 @@ const createApp = (): Express => {
     app.use("/api/drive", driveRouter);
     app.use("/api/user", userRouter);
     app.use("/api/affiliate", affiliateRouter);
+    app.use("/api/student", studentRouter);
+    app.use("/api/notification", notificationRouter);
+    app.use("/api/mentor", mentorRouter);
 
     app.get('/', (_req: Request, res: Response) => {
         res.status(200).json({ status: 'ok', message: 'Service is running' });
@@ -63,7 +66,7 @@ const createApp = (): Express => {
                 : error.message || 'Upload failed';
             return res.status(400).json({ status: 'failed', message });
         }
-        if (error?.message && /only image files are allowed/i.test(error.message)) {
+        if (error?.message && /only (image|video) files are allowed/i.test(error.message)) {
             return res.status(400).json({ status: 'failed', message: error.message });
         }
         return res.status(500).json({ status: 'failed', message: 'Internal server error' });

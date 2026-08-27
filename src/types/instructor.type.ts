@@ -33,6 +33,12 @@ export interface IInstructor extends mongoose.Document {
     hasAffiliateAccount?: boolean;
     affiliate_money?: number;
     googleId?: string;
+    recommendations?: string[];
+    recommendationsProvided?: boolean;
+    isMentor?: boolean;
+    mentorshipBio?: string;
+    whatsappNumber?: string;
+    mentorshipPrice?: number;
 }
 
 export type InstructorLoginReqBody = {

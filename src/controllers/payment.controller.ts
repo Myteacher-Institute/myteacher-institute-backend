@@ -15,6 +15,7 @@ import { invalidateInstructorStudentsCache } from '../services/instructor-studen
 import { invalidateInstructorEarningsCache } from '../services/instructor-earnings.service';
 import { createNotification } from '../services/notification.service';
 import { sendCoursePurchaseEmail } from '../services/email.service';
+import { completeSuccessfulMentorship } from '../services/mentor.service';
 import { cacheDelPattern } from '../config/redis';
 
 const ALLOWED_REDIRECT_ORIGINS = process.env.ALLOWED_ORIGINS
@@ -433,20 +434,27 @@ export const handleVerifyPayment = async (req: Request<{}, {}, {}, { transaction
             });
         }
 
-        // #17 Verify amount matches what was expected — prevents paying less than course price
-        const course = await Course.findById(transaction.courseId);
-        if (course && verificationResponse.data.amount < transaction.amount) {
-            transaction.status = 'failed';
-            transaction.flutterwaveTransactionId = transaction_id;
-            await transaction.save();
-            return res.status(400).json({
-                status: 'failed',
-                message: 'Payment amount does not match expected amount'
-            });
+        // #17 Verify amount matches what was expected — prevents paying less than course price.
+        // Mentorship transactions have no course; their amount is fixed at creation time.
+        if (transaction.purpose !== 'mentorship') {
+            const course = await Course.findById(transaction.courseId);
+            if (course && verificationResponse.data.amount < transaction.amount) {
+                transaction.status = 'failed';
+                transaction.flutterwaveTransactionId = transaction_id;
+                await transaction.save();
+                return res.status(400).json({
+                    status: 'failed',
+                    message: 'Payment amount does not match expected amount'
+                });
+            }
         }
 
         transaction.flutterwaveTransactionId = transaction_id;
-        await completeSuccessfulPurchase(transaction, req);
+        if (transaction.purpose === 'mentorship') {
+            await completeSuccessfulMentorship(transaction);
+        } else {
+            await completeSuccessfulPurchase(transaction, req);
+        }
 
         return res.status(200).json({
             status: 'success',
@@ -568,7 +576,11 @@ export const handleGetPaymentStatus = async (req: Request<{ tx_ref: string }, {}
         }
 
         transaction.flutterwaveTransactionId = String(verification?.data?.transaction_id ?? '');
-        await completeSuccessfulPurchase(transaction, req);
+        if (transaction.purpose === 'mentorship') {
+            await completeSuccessfulMentorship(transaction);
+        } else {
+            await completeSuccessfulPurchase(transaction, req);
+        }
 
         return res.status(200).json({
             status: 'success',

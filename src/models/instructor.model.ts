@@ -74,6 +74,28 @@ const instructorSchema = new Schema<IInstructor>({
         type: String,
         unique: true,
         sparse: true
+    },
+    recommendations: {
+        type: [String],
+        default: []
+    },
+    recommendationsProvided: {
+        type: Boolean,
+        default: false
+    },
+    isMentor: {
+        type: Boolean,
+        default: false
+    },
+    mentorshipBio: {
+        type: String
+    },
+    whatsappNumber: {
+        type: String
+    },
+    mentorshipPrice: {
+        type: Number,
+        default: 0
     }
 }, {
     timestamps: true

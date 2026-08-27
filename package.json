@@ -5,6 +5,8 @@
   "main": "dist/src/server.js",
   "scripts": {
     "dev": "nodemon --exec tsx src/server.ts",
+    "worker": "tsx src/queues/queue-worker.ts",
+    "dev:worker": "nodemon --exec tsx src/queues/queue-worker.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",

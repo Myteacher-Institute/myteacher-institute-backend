@@ -7,6 +7,7 @@ import { SCOPES, createOAuth2Client } from "../services/google-youtube.services"
 import { emitToUser } from "../config/socket";
 import type { YouTubeUploadJob } from "../queues/types";
 import { signState } from "../utils/oauth-state";
+import { recordYouTubeResult, failCourseCreation, trackCourseCreationUploadProgress } from "../services/course-creation.service";
 
 const ALLOWED_VIDEO_DIR = path.resolve(
     process.env.VIDEO_UPLOAD_DIR || path.join(process.cwd(), 'uploads', 'videos')
@@ -86,7 +87,13 @@ const refreshAccessToken = async (oAuth2Client: any, instructor: any) => {
 };
 
 export const processYouTubeUpload = async (job: YouTubeUploadJob): Promise<void> => {
-    const { instructorId, filePath, originalName, title, description, tags, privacyStatus, clientVideoIndex } = job;
+    const { instructorId, filePath, originalName, title, description, tags, privacyStatus, clientVideoIndex, courseCreationJobId } = job;
+
+    const trackProgress = (percent: number | undefined) => {
+        if (courseCreationJobId && typeof percent === 'number') {
+            trackCourseCreationUploadProgress(courseCreationJobId, percent).catch(() => {});
+        }
+    };
 
     const cleanup = () => {
         if (filePath && fs.existsSync(filePath)) {
@@ -141,12 +148,14 @@ export const processYouTubeUpload = async (job: YouTubeUploadJob): Promise<void>
         const youtube = google.youtube({ version: "v3", auth: oAuth2Client });
 
         emitProgress(instructorId, clientVideoIndex, 'preparing', 0);
+        trackProgress(0);
 
         // Track how many bytes have actually reached YouTube so we can show a
         // real progress percentage during the long server-side upload (~1-4 minutes).
         const totalBytes = fs.statSync(resolvedPath).size;
         let uploadedBytes = 0;
         let lastEmittedPercent = -1;
+        let lastTrackedPercent = -1;
         const progressStream = new Transform({
             transform(chunk: Buffer, _encoding, callback) {
                 uploadedBytes += chunk.length;
@@ -154,6 +163,10 @@ export const processYouTubeUpload = async (job: YouTubeUploadJob): Promise<void>
                 if (pct !== lastEmittedPercent) {
                     lastEmittedPercent = pct;
                     emitProgress(instructorId, clientVideoIndex, 'uploading', pct);
+                }
+                if (courseCreationJobId && pct - lastTrackedPercent >= 5) {
+                    lastTrackedPercent = pct;
+                    trackProgress(pct);
                 }
                 callback(null, chunk);
             }
@@ -175,6 +188,17 @@ export const processYouTubeUpload = async (job: YouTubeUploadJob): Promise<void>
             media: { body: progressStream }
         });
 
+        // Persist the finished URL into the durable course-creation job BEFORE
+        // cleanup, so a crash between upload-success and cleanup never loses it.
+        if (courseCreationJobId && typeof clientVideoIndex === 'number') {
+            await recordYouTubeResult(
+                courseCreationJobId,
+                clientVideoIndex,
+                response.data.id,
+                `https://www.youtube.com/watch?v=${response.data.id}`
+            );
+        }
+
         cleanup();
 
         emitProgress(instructorId, clientVideoIndex, 'done', 100);
@@ -191,6 +215,9 @@ export const processYouTubeUpload = async (job: YouTubeUploadJob): Promise<void>
             errorMessage.includes('credentials') ||
             errorMessage.includes('token')) {
             try {
+                if (courseCreationJobId) {
+                    await failCourseCreation(courseCreationJobId, "YouTube re-authentication required. Please connect YouTube again and resubmit.");
+                }
                 emitReauth(instructorId, clientVideoIndex);
                 return;
             } catch (authError) {
@@ -198,6 +225,9 @@ export const processYouTubeUpload = async (job: YouTubeUploadJob): Promise<void>
             }
         }
 
+        if (courseCreationJobId) {
+            await failCourseCreation(courseCreationJobId, errorMessage);
+        }
         emitFailed(instructorId, clientVideoIndex, 'failed', errorMessage);
     }
 };

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {ProtectMiddleWare} from "../middleware/protect-route";
-import { handleEditUserProfile, handleGetUserProfile } from '../controllers/user.controller';
+import { handleEditUserProfile, handleGetUserProfile, handleReportBug } from '../controllers/user.controller';
 import { handleUploadUserProfilePicture } from '../controllers/profile-picture.controller';
 import { profileUpload } from '../config/profile-upload';
 
@@ -24,5 +24,6 @@ userRouter.get('/me', generalLimiter, handleGetUserProfile);
 userRouter.get('/profile', generalLimiter, handleGetUserProfile);
 userRouter.patch('/profile', generalLimiter, handleEditUserProfile);
 userRouter.post('/profile-picture', generalLimiter, profileUpload.single('profilePicture'), handleUploadUserProfilePicture);
+userRouter.post('/report-bug', generalLimiter, handleReportBug);
 
 export default userRouter;

@@ -20,6 +20,11 @@ export interface IUser extends mongoose.Document {
     affiliate_id?: string;
     affiliate_money?: number;
     googleId?: string;
+    recommendations?: string[];
+    recommendationsProvided?: boolean;
+    // Provided by mongoose timestamps option on the user schema
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 import { ICourse, AddCourseReqBody, AddCourseResT, FetchCoursesByUserReqBody, FetchCoursesByUserResT, FetchAllCoursesResT, BrowseCoursesResT, EditCourseReqBody, EditCourseResT, FetchCourseByIdResT, CoursePreviewResT } from './course.type';
@@ -33,6 +38,10 @@ import { FetchInstructorEarningsResT, CourseEarnings, EarningsData } from './ins
 import { EditInstructorProfileReqBody, EditInstructorProfileResT, SendDeleteAccountOTPReqBody, SendDeleteAccountOTPResT, VerifyDeleteAccountOTPReqBody, DeleteInstructorAccountResT, ReportBugReqBody, ReportBugResT } from './instructor-settings.type';
 
 import { ICompanyMoney } from './company-money.type';
+
+import { ICourseCreationJob, CreateCourseCreationReqBody, CreateCourseCreationResT, FetchActiveCourseCreationsResT, ActiveCourseCreationJob, CourseCreationStatus, CourseCreationStage, CourseCreationPayload, CourseCreationVideoFile, CourseCreationAssetFile, CourseCreationResultVideo, CourseCreationResultAsset } from './course-creation.type';
+
+import { BecomeMentorReqBody, BecomeMentorResT, GetMentorStatusResT, MentorListItem, GetAllMentorsResT, RequestMentorshipReqBody, RequestMentorshipResT, GetInstructorMentorRequestsResT, AcceptMentorshipReqBody, AcceptMentorRequestResT, StudentMentorshipItem, GetStudentMentorshipsResT, CreateMentorshipPaymentReqBody, CreateMentorshipPaymentResT } from './mentorship.type';
 
 
 
@@ -100,5 +109,31 @@ export type {
     DeleteInstructorAccountResT,
     ReportBugReqBody,
     ReportBugResT,
-    ICompanyMoney
+    ICompanyMoney,
+    ICourseCreationJob,
+    CreateCourseCreationReqBody,
+    CreateCourseCreationResT,
+    FetchActiveCourseCreationsResT,
+    ActiveCourseCreationJob,
+    CourseCreationStatus,
+    CourseCreationStage,
+    CourseCreationPayload,
+    CourseCreationVideoFile,
+    CourseCreationAssetFile,
+    CourseCreationResultVideo,
+    CourseCreationResultAsset,
+    BecomeMentorReqBody,
+    BecomeMentorResT,
+    GetMentorStatusResT,
+    MentorListItem,
+    GetAllMentorsResT,
+    RequestMentorshipReqBody,
+    RequestMentorshipResT,
+    GetInstructorMentorRequestsResT,
+    AcceptMentorshipReqBody,
+    AcceptMentorRequestResT,
+    StudentMentorshipItem,
+    GetStudentMentorshipsResT,
+    CreateMentorshipPaymentReqBody,
+    CreateMentorshipPaymentResT
 };

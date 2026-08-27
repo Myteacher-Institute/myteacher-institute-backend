@@ -7,6 +7,7 @@ export interface YouTubeUploadJob {
     tags: string[];
     privacyStatus: 'public' | 'private' | 'unlisted';
     clientVideoIndex?: number;
+    courseCreationJobId?: string;
 }
 
 export interface DriveUploadJob {
@@ -16,4 +17,5 @@ export interface DriveUploadJob {
     name: string;
     mimeType: string;
     clientAssetIndex?: number;
+    courseCreationJobId?: string;
 }

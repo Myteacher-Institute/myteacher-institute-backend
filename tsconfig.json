@@ -18,39 +18,20 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "jsx": "react-jsx"
-  },
-  "paths": {
-    "@/*": [
-      "./src/*"
-    ],
-    "@/config/*": [
-      "./src/config/*"
-    ],
-    "@/controllers/*": [
-      "./src/controllers/*"
-    ],
-    "@/middleware/*": [
-      "./src/middleware/*"
-    ],
-    "@/models/*": [
-      "./src/models/*"
-    ],
-    "@/routes/*": [
-      "./src/routes/*"
-    ],
-    "@/services/*": [
-      "./src/services/*"
-    ],
-    "@/templates/*": [
-      "./src/templates/*"
-    ],
-    "@/types/*": [
-      "./src/types/*"
-    ],
-    "@/utils/*": [
-      "./src/utils/*"
-    ]
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/config/*": ["./src/config/*"],
+      "@/controllers/*": ["./src/controllers/*"],
+      "@/middleware/*": ["./src/middleware/*"],
+      "@/models/*": ["./src/models/*"],
+      "@/routes/*": ["./src/routes/*"],
+      "@/services/*": ["./src/services/*"],
+      "@/templates/*": ["./src/templates/*"],
+      "@/types/*": ["./src/types/*"],
+      "@/utils/*": ["./src/utils/*"]
+    }
   },
   "include": [
     "src/**/*"

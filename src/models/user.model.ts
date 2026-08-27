@@ -66,6 +66,14 @@ const userSchema = new mongoose.Schema<IUser>({
       type: String,
       unique: true,
       sparse: true
+    },
+    recommendations: {
+      type: [String],
+      default: []
+    },
+    recommendationsProvided: {
+      type: Boolean,
+      default: false
     }
 }, {
     timestamps: true

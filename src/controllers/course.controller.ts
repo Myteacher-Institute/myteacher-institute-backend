@@ -476,6 +476,7 @@ const handleFetchCoursePreview = async (req: Request<{ courseId: string }>, res:
             lessons: (course.courseVideos ?? []).length,
             previewThumbnail: getYouTubeThumbnail(previewVideos[0]?.videoUrl),
             previewVideos,
+            appliedUsers: course.appliedUsers ?? [],
         };
 
         // Cache the result for 10 minutes (600 seconds)
@@ -1498,12 +1499,19 @@ const handleDeleteOnly = async (req: Request<{ courseId: string }, {}, EditCours
             }
         }
 
+        // Signal auth-related deletion failures so the frontend can prompt a
+        // re-authentication modal instead of silently leaving resources behind.
+        const isAuthFailure = (msg: string) => /re-authenticat|token refresh|unauthorized|invalid_grant|credential/i.test(msg);
+        const youtubeReauth = deletionErrors.some((e) => /youtube/i.test(e) && isAuthFailure(e));
+        const driveReauth = deletionErrors.some((e) => /drive/i.test(e) && isAuthFailure(e));
+
         return res.status(200).json({
             status: "success",
             message: deletionErrors.length > 0 
                 ? "Some resources could not be deleted from external services." 
                 : "Resources deleted successfully",
-            deletionErrors: deletionErrors.length > 0 ? deletionErrors : undefined
+            deletionErrors: deletionErrors.length > 0 ? deletionErrors : undefined,
+            ...((youtubeReauth || driveReauth) ? { reauth: { youtube: youtubeReauth, drive: driveReauth } } : {})
         });
 
     } catch (error) {

@@ -10,6 +10,8 @@ export interface IAdmin extends mongoose.Document {
     isOnline?: boolean;
     lastSeen?: Date;
     socketId?: string;
+    recommendations?: string[];
+    recommendationsProvided?: boolean;
 }
 
 export type AddAdminReqBody = {

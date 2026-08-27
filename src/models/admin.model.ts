@@ -34,6 +34,14 @@ const adminSchema = new Schema<IAdmin>({
     },
     socketId: {
         type: String
+    },
+    recommendations: {
+        type: [String],
+        default: []
+    },
+    recommendationsProvided: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

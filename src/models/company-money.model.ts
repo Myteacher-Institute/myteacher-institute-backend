@@ -7,10 +7,10 @@ const companyMoneySchema = new mongoose.Schema<ICompanyMoney>({
         required: true,
         unique: true
     },
+    // Optional — mentorship payments have no associated course
     courseId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Course',
-        required: true
+        ref: 'Course'
     },
     userId: {
         type: mongoose.Schema.Types.ObjectId,

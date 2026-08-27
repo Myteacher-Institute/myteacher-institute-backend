@@ -91,3 +91,49 @@ export const handleGetUserProfile = async (
     return res.status(500).json({ status: 'failed', message: 'Failed to retrieve profile' });
   }
 };
+
+interface ReportBugReqBody {
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+}
+
+interface ReportBugResT {
+  status: 'success' | 'failed';
+  message: string;
+}
+
+export const handleReportBug = async (
+  req: Request<any, any, ReportBugReqBody>,
+  res: Response<ReportBugResT>
+) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ status: 'failed', message: 'Unauthorized' });
+    }
+
+    const { title, description, priority } = req.body;
+
+    if (!title || !description) {
+      return res.status(400).json({ status: 'failed', message: 'Title and description are required' });
+    }
+
+    // Here you would typically save the bug report to a database
+    // For now, we'll just log it and return success
+    console.log('Bug report:', {
+      userId: req.userId,
+      title,
+      description,
+      priority,
+      timestamp: new Date()
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Bug reported successfully'
+    });
+  } catch (error: any) {
+    console.error('Error reporting bug:', error);
+    return res.status(500).json({ status: 'failed', message: 'Failed to report bug' });
+  }
+};
