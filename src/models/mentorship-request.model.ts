@@ -15,11 +15,27 @@ export interface IMentorshipRequest {
     // Set by the instructor when accepting — schedule shown to the student
     availableTime?: string;
     programDuration?: string;
+    // Machine-readable daily availability window ("HH:mm") used by the
+    // student/instructor schedule pages to remind "it's time to connect".
+    availableStartTime?: string;
+    availableEndTime?: string;
+    // Required for Group mentorships — the WhatsApp group the student joins
+    groupChatLink?: string;
+    // Instructor-set price for this specific program (falls back to the default mentorshipPrice)
+    actualPrice?: number;
     // Computed from programDuration + acceptedAt — when the program expires
     programEndDate?: Date;
     paymentReference?: string;
     paymentStatus?: 'pending' | 'successful' | 'failed' | 'cancelled';
     amountPaid?: number;
+    // Renewal information
+    renewalInfo?: {
+        originalPrice: number;
+        discountedPrice: number;
+        newDuration: string;
+        newEndDate: Date;
+        paymentReference: string;
+    };
     createdAt: Date;
     updatedAt: Date;
 }
@@ -80,6 +96,22 @@ const mentorshipRequestSchema = new mongoose.Schema<IMentorshipRequest>({
         type: String,
         trim: true
     },
+    availableStartTime: {
+        type: String,
+        trim: true
+    },
+    availableEndTime: {
+        type: String,
+        trim: true
+    },
+    groupChatLink: {
+        type: String,
+        trim: true
+    },
+    actualPrice: {
+        type: Number,
+        min: 0
+    },
     programEndDate: {
         type: Date,
     },
@@ -92,6 +124,13 @@ const mentorshipRequestSchema = new mongoose.Schema<IMentorshipRequest>({
     },
     amountPaid: {
         type: Number
+    },
+    renewalInfo: {
+        originalPrice: Number,
+        discountedPrice: Number,
+        newDuration: String,
+        newEndDate: Date,
+        paymentReference: String
     }
 }, {
     timestamps: true

@@ -65,11 +65,43 @@ const checkNumberOnWhatsApp = async (normalizedNumber: string): Promise<{ onWhat
 };
 
 /**
- * Validate a WhatsApp number before a mentor activates mentorship.
- * - Format must be valid E.164 (hard requirement).
- * - Existence on WhatsApp is verified via the public endpoint; when the
- *   verification service is unreachable we fall back to format-only validity.
+ * Validate a WhatsApp group invite link.
+ * Accepts the two common formats:
+ *   https://chat.whatsapp.com/<inviteCode>  (group invite)
+ *   https://wa.me/<phoneNumber>             (direct chat shortcut)
  */
+export const getWhatsAppGroupLinkInfo = (raw: string): { valid: boolean; normalizedLink: string | null; message?: string } => {
+    if (!raw) return { valid: false, normalizedLink: null, message: 'WhatsApp group link is required for group mentorships' };
+
+    let link = raw.trim();
+    // Allow a bare invite code
+    if (/^[A-Za-z0-9-_]{10,}$/.test(link) && !link.includes('.')) {
+        link = `https://chat.whatsapp.com/${link}`;
+    }
+    // Normalise http → https
+    if (link.startsWith('http://')) {
+        link = link.replace('http://', 'https://');
+    }
+
+    const trimmed = link.replace(/\/+$/, '');
+
+    const groupPattern = /^https:\/\/chat\.whatsapp\.com\/([A-Za-z0-9_-]{10,})$/i;
+    const directPattern = /^https:\/\/wa\.me\/[1-9]\d{7,14}(\?.*)?$/i;
+
+    if (groupPattern.test(trimmed)) {
+        return { valid: true, normalizedLink: trimmed };
+    }
+    if (directPattern.test(trimmed)) {
+        return { valid: true, normalizedLink: trimmed };
+    }
+
+    return {
+        valid: false,
+        normalizedLink: null,
+        message: 'Invalid WhatsApp group link. It should look like https://chat.whatsapp.com/<invite-code>',
+    };
+};
+
 export const validateWhatsAppNumber = async (rawNumber: string): Promise<WhatsAppCheckResult> => {
     const normalizedNumber = normalizePhoneNumber(rawNumber);
 

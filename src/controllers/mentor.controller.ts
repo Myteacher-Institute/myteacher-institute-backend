@@ -9,6 +9,8 @@ import {
     rejectMentorshipRequest,
     createMentorshipPayment,
     getStudentMentorships,
+    renewMentorship,
+    deleteMentorship,
 } from "../services/mentor.service";
 import { AcceptMentorshipReqBody, BecomeMentorReqBody, BecomeMentorResT, CreateMentorshipPaymentResT, RequestMentorshipReqBody, RequestMentorshipResT } from "../types";
 import { cacheGet, cacheSet } from "../config/redis";
@@ -191,6 +193,8 @@ const handleAcceptMentorshipRequest = async (req: Request<{ requestId: string },
         const result = await acceptMentorshipRequest(instructorId, requestId, {
             availableTime: req.body?.availableTime,
             programDuration: req.body?.programDuration,
+            groupChatLink: req.body?.groupChatLink,
+            actualPrice: req.body?.actualPrice,
         });
 
         if (!result.success) {
@@ -272,4 +276,75 @@ const handleCreateMentorshipPayment = async (req: Request<{ requestId: string }>
     }
 };
 
-export { handleBecomeMentor, handleGetMentorStatus, handleGetAllMentors, handleRequestMentorship, handleGetInstructorMentorRequests, handleAcceptMentorshipRequest, handleRejectMentorshipRequest, handleCreateMentorshipPayment };
+// POST /api/mentor/mentorships/:mentorshipId/renew — student renews an ended mentorship
+const handleRenewMentorship = async (req: Request<{ mentorshipId: string }, {}, { duration: string }>, res: Response<any>) => {
+    try {
+        const studentId = req.userId;
+        const { mentorshipId } = req.params;
+        const { duration } = req.body;
+
+        console.log('Renew mentorship request:', { studentId, mentorshipId, duration });
+
+        if (!studentId) {
+            return res.status(401).json({ status: "failed", message: "You must be logged in to renew a mentorship" });
+        }
+
+        if (!duration) {
+            return res.status(400).json({ status: "failed", message: "Duration is required" });
+        }
+
+        const result = await renewMentorship(studentId, mentorshipId, duration);
+
+        console.log('Renew mentorship result:', result);
+
+        if (!result.success) {
+            return res.status(result.message?.includes('not found') ? 404 : 400).json({
+                status: "failed",
+                message: result.message,
+            });
+        }
+
+        return res.status(200).json({
+            status: "success",
+            message: result.message,
+            paymentLink: result.paymentLink,
+            transactionReference: result.transactionReference,
+            discountedPrice: result.discountedPrice,
+            originalPrice: result.originalPrice,
+        });
+    } catch (error) {
+        console.error('Renew mentorship controller error --->', (error as Error)?.message ?? error);
+        return res.status(500).json({ status: "failed", message: "Internal server error" });
+    }
+};
+
+// DELETE /api/mentor/mentorships/:mentorshipId — student ends a mentorship
+const handleDeleteMentorship = async (req: Request<{ mentorshipId: string }>, res: Response<any>) => {
+    try {
+        const studentId = req.userId;
+        const { mentorshipId } = req.params;
+
+        if (!studentId) {
+            return res.status(401).json({ status: "failed", message: "You must be logged in to end a mentorship" });
+        }
+
+        const result = await deleteMentorship(studentId, mentorshipId);
+
+        if (!result.success) {
+            return res.status(result.message?.includes('not found') ? 404 : 400).json({
+                status: "failed",
+                message: result.message,
+            });
+        }
+
+        return res.status(200).json({
+            status: "success",
+            message: result.message,
+        });
+    } catch (error) {
+        console.error('Delete mentorship controller error --->', (error as Error)?.message ?? error);
+        return res.status(500).json({ status: "failed", message: "Internal server error" });
+    }
+};
+
+export { handleBecomeMentor, handleGetMentorStatus, handleGetAllMentors, handleRequestMentorship, handleGetInstructorMentorRequests, handleAcceptMentorshipRequest, handleRejectMentorshipRequest, handleCreateMentorshipPayment, handleRenewMentorship, handleDeleteMentorship };

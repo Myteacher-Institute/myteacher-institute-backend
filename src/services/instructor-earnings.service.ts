@@ -1,4 +1,5 @@
 import { Course } from "../models/course.model";
+import { Instructor } from "../models/instructor.model";
 import { cacheGet, cacheSet, cacheDelPattern } from "../config/redis";
 import mongoose from "mongoose";
 
@@ -13,6 +14,12 @@ export const fetchInstructorEarnings = async (instructorId: string) => {
             return { success: true, data: cachedData };
         }
 
+        // moneyMade is the single source of truth for what the instructor has
+        // actually earned — it is credited (70% share) on every paid course and
+        // mentorship, so totals must not be re-derived from price × students.
+        const instructor = await Instructor.findById(instructorId).select('moneyMade').lean();
+        const moneyMade = instructor?.moneyMade ?? 0;
+
         // Fetch courses with only price and appliedUsers for performance
         const courses = await Course.find(
             { "instructorDetails.userId": instructorId },
@@ -24,28 +31,28 @@ export const fetchInstructorEarnings = async (instructorId: string) => {
             }
         ).lean();
 
-        // Calculate earnings for each course
+        // Course breakdown for display (per-course rows)
         const coursesEarnings = courses.map(course => {
             const studentCount = course.appliedUsers?.length || 0;
-            const totalRevenue = course.price * studentCount;
-            const instructorShare = totalRevenue * 0.7; // 70% for instructor
-            const companyShare = totalRevenue * 0.3; // 30% for company
+            const courseRevenue = course.price * studentCount;
+            const instructorShare = courseRevenue * 0.7; // 70% for instructor
+            const companyShare = courseRevenue * 0.3; // 30% for company
 
             return {
                 _id: course._id,
                 courseName: course.courseName,
                 price: course.price,
                 studentCount,
-                totalRevenue,
+                totalRevenue: courseRevenue,
                 instructorShare,
                 companyShare
             };
         });
 
-        // Calculate totals
-        const totalRevenue = coursesEarnings.reduce((sum, course) => sum + course.totalRevenue, 0);
-        const totalInstructorEarnings = coursesEarnings.reduce((sum, course) => sum + course.instructorShare, 0);
-        const totalCompanyEarnings = coursesEarnings.reduce((sum, course) => sum + course.companyShare, 0);
+        // Authoritative totals come from the instructor's moneyMade field
+        const totalRevenue = moneyMade;
+        const totalInstructorEarnings = moneyMade;
+        const totalCompanyEarnings = Math.round(moneyMade * 0.3 / 0.7);
         const totalStudents = coursesEarnings.reduce((sum, course) => sum + course.studentCount, 0);
 
         // Calculate monthly earnings (last 6 months)

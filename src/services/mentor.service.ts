@@ -4,7 +4,7 @@ import MentorshipRequest from "../models/mentorship-request.model";
 import Transaction from '../models/transaction.model';
 import CompanyMoney from '../models/company-money.model';
 import { BecomeMentorReqBody, RequestMentorshipReqBody } from "../types";
-import { validateWhatsAppNumber } from "./whatsapp.service";
+import { validateWhatsAppNumber, getWhatsAppGroupLinkInfo } from "./whatsapp.service";
 import {
     sendMentorshipRequestEmailToInstructor,
     sendMentorshipRequestConfirmationToStudent,
@@ -292,7 +292,14 @@ export const getInstructorMentorRequests = async (instructorId: string) => {
 export const acceptMentorshipRequest = async (
     instructorId: string,
     requestId: string,
-    payload?: { availableTime?: string; programDuration?: string },
+    payload?: {
+        availableTime?: string;
+        programDuration?: string;
+        groupChatLink?: string;
+        actualPrice?: number;
+        availableStartTime?: string;
+        availableEndTime?: string;
+    },
 ) => {
     try {
         const request = await MentorshipRequest.findById(requestId);
@@ -310,12 +317,37 @@ export const acceptMentorshipRequest = async (
 
         const availableTime = payload?.availableTime?.trim();
         const programDuration = payload?.programDuration?.trim();
+        const groupChatLink = payload?.groupChatLink?.trim();
+        const actualPrice = payload?.actualPrice;
+        const availableStartTime = payload?.availableStartTime?.trim();
+        const availableEndTime = payload?.availableEndTime?.trim();
 
         if (!availableTime) {
             return { success: false, message: 'Available time is required when accepting a mentorship request' };
         }
         if (!programDuration) {
             return { success: false, message: 'Program duration is required when accepting a mentorship request' };
+        }
+
+        // The schedule pages rely on a machine-readable daily window. It is
+        // optional (falls back to the free-text display only), but when either
+        // bound is provided both must be valid "HH:mm" values.
+        const isValidHHMM = (value: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+        if (availableStartTime || availableEndTime) {
+            if (!isValidHHMM(availableStartTime ?? '') || !isValidHHMM(availableEndTime ?? '')) {
+                return { success: false, message: 'Availability window times must be valid HH:MM start and end times' };
+            }
+            if (availableStartTime === availableEndTime) {
+                return { success: false, message: 'Availability start and end times must be different' };
+            }
+        }
+
+        // Group mentorships must include a valid WhatsApp group link the student can join
+        if (request.mentorshipType === 'Group') {
+            const groupInfo = getWhatsAppGroupLinkInfo(groupChatLink ?? '');
+            if (!groupInfo.valid || !groupInfo.normalizedLink) {
+                return { success: false, message: groupInfo.message || 'A valid WhatsApp group link is required for group mentorships' };
+            }
         }
 
         const instructor = await Instructor.findById(instructorId);
@@ -328,9 +360,19 @@ export const acceptMentorshipRequest = async (
             return { success: false, message: 'Activate your mentorship account before accepting requests' };
         }
 
+        // Effective price: instructor can set a custom price per program, otherwise the default
+        const effectivePrice = (typeof actualPrice === 'number' && actualPrice > 0)
+            ? Math.round(actualPrice)
+            : (instructor.mentorshipPrice ?? 0);
+        if (effectivePrice <= 0) {
+            return { success: false, message: 'A valid mentorship price is required' };
+        }
+
         request.status = 'accepted';
         request.availableTime = availableTime;
         request.programDuration = programDuration;
+        request.groupChatLink = request.mentorshipType === 'Group' ? groupChatLink : undefined;
+        request.actualPrice = (typeof actualPrice === 'number' && actualPrice > 0) ? Math.round(actualPrice) : undefined;
 
         // Compute the end date from the human-readable duration string
         const days = parseProgramDuration(programDuration);
@@ -352,7 +394,7 @@ export const acceptMentorshipRequest = async (
         let paymentLink = '';
         try {
             const paymentResponse = await createPaymentLink({
-                amount: instructor.mentorshipPrice ?? 0,
+                amount: effectivePrice,
                 currency: 'NGN',
                 tx_ref: transactionReference,
                 redirect_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/callback`,
@@ -378,7 +420,7 @@ export const acceptMentorshipRequest = async (
         await Transaction.create({
             userId: request.studentId,
             purpose: 'mentorship',
-            amount: instructor.mentorshipPrice ?? 0,
+            amount: effectivePrice,
             currency: 'NGN',
             status: 'pending',
             transactionReference,
@@ -390,7 +432,7 @@ export const acceptMentorshipRequest = async (
             studentEmail: student.email,
             studentName: student.name,
             mentorName: instructor.name,
-            amount: instructor.mentorshipPrice ?? 0,
+            amount: effectivePrice,
             currency: 'NGN',
             paymentLink,
             availableTime,
@@ -401,7 +443,7 @@ export const acceptMentorshipRequest = async (
             recipientId: request.studentId.toString(),
             recipientType: 'user',
             title: 'Mentorship Request Accepted',
-            message: `${instructor.name} accepted your mentorship request! Available time: ${availableTime} • Duration: ${programDuration}. Complete your payment of NGN ${instructor.mentorshipPrice ?? 0} to activate your mentorship.`,
+            message: `${instructor.name} accepted your mentorship request! Available time: ${availableTime} • Duration: ${programDuration}. Complete your payment of NGN ${effectivePrice} to activate your mentorship.`,
             type: 'success',
             relatedId: requestId,
             relatedType: 'mentorship-payment',
@@ -477,6 +519,210 @@ export const rejectMentorshipRequest = async (instructorId: string, requestId: s
     } catch (error) {
         console.error('Reject mentorship request error --->', error);
         return { success: false, message: 'Failed to reject mentorship request' };
+    }
+};
+
+// ============ Student: Renew Mentorship ============
+export const renewMentorship = async (studentId: string, mentorshipId: string, newDuration: string) => {
+    try {
+        console.log('Starting mentorship renewal:', { studentId, mentorshipId, newDuration });
+
+        const request = await MentorshipRequest.findById(mentorshipId).populate('instructorId');
+        if (!request) {
+            console.log('Mentorship request not found');
+            return { success: false, message: 'Mentorship request not found' };
+        }
+
+        console.log('Found request:', { 
+            status: request.status, 
+            studentId: request.studentId.toString(),
+            actualPrice: request.actualPrice,
+            programDuration: request.programDuration,
+            instructorId: request.instructorId
+        });
+
+        if (request.studentId.toString() !== studentId) {
+            console.log('Unauthorized access attempt');
+            return { success: false, message: 'Unauthorized: You can only renew your own mentorships' };
+        }
+
+        if (request.status !== 'ended') {
+            console.log('Wrong status:', request.status);
+            return { success: false, message: 'Only ended mentorships can be renewed' };
+        }
+
+        // Get the original price and duration
+        const originalPrice = request.actualPrice || (request.instructorId as any)?.mentorshipPrice || 0;
+        const originalDuration = request.programDuration || '1 month';
+
+        console.log('Pricing calculation:', { originalPrice, originalDuration });
+
+        if (originalPrice === 0) {
+            console.log('Zero original price');
+            return { success: false, message: 'Cannot renew mentorship with no original price' };
+        }
+
+        // Convert duration to months for pricing calculation
+        const getDurationInMonths = (duration: string): number => {
+            const lower = duration.toLowerCase();
+            if (lower.includes('month')) {
+                const months = parseInt(lower) || 1;
+                return months;
+            } else if (lower.includes('year')) {
+                const years = parseInt(lower) || 1;
+                return years * 12;
+            } else if (lower.includes('week')) {
+                const weeks = parseInt(lower) || 1;
+                return weeks / 4; // Approximate weeks to months
+            } else if (lower.includes('day')) {
+                const days = parseInt(lower) || 1;
+                return days / 30; // Approximate days to months
+            }
+            return 1; // Default to 1 month
+        };
+
+        const originalMonths = getDurationInMonths(originalDuration);
+        const newDurationMonths = getDurationInMonths(newDuration);
+
+        // Calculate monthly rate from original payment
+        const monthlyRate = originalPrice / originalMonths;
+
+        // Calculate new price based on duration
+        const calculatedPrice = Math.round(monthlyRate * newDurationMonths);
+
+        // Apply 10% discount
+        const discountedPrice = Math.round(calculatedPrice * 0.9);
+
+        console.log('Price breakdown:', { 
+            originalMonths, 
+            newDurationMonths, 
+            monthlyRate, 
+            calculatedPrice, 
+            discountedPrice 
+        });
+
+        // Calculate new end date based on duration (convert months to days)
+        const newDurationDays = Math.round(newDurationMonths * 30);
+        const newEndDate = new Date();
+        newEndDate.setDate(newEndDate.getDate() + newDurationDays);
+
+        // Get student information for payment
+        const student = await User.findById(studentId);
+        if (!student) {
+            return { success: false, message: 'Student not found' };
+        }
+
+        // Generate transaction reference
+        const transactionReference = `MYT-MENTOR-RENEW-${studentId}-${mentorshipId}-${Date.now()}`;
+
+        console.log('Creating payment link:', {
+            discountedPrice,
+            transactionReference,
+            studentEmail: student.email,
+            studentName: student.name
+        });
+
+        // Create payment link with discounted price
+        const paymentResult = await createPaymentLink({
+            amount: discountedPrice,
+            currency: 'NGN',
+            tx_ref: transactionReference,
+            redirect_url: `${process.env.FRONTEND_URL}/student/mentorship?payment=success`,
+            customer: {
+                email: student.email,
+                name: student.name
+            },
+            customizations: {
+                title: 'Mentorship Renewal',
+                description: `Renew mentorship with ${(request.instructorId as any)?.name || 'your mentor'}`
+            }
+        });
+
+        console.log('Payment link result:', paymentResult);
+
+        if (paymentResult.status !== 'success') {
+            console.log('Payment link creation failed');
+            return { success: false, message: 'Failed to create payment link' };
+        }
+
+        // Create transaction record for renewal payment
+        await Transaction.create({
+            userId: studentId,
+            purpose: 'mentorship',
+            amount: discountedPrice,
+            currency: 'NGN',
+            status: 'pending',
+            transactionReference,
+            paymentMethod: 'flutterwave',
+        });
+
+        // Update the request with renewal info and temporary payment reference
+        // (will be fully updated after payment success)
+        request.renewalInfo = {
+            originalPrice: calculatedPrice, // Store the calculated price before discount
+            discountedPrice,
+            newDuration,
+            newEndDate,
+            paymentReference: transactionReference
+        };
+        // Temporarily set paymentReference so payment verification can find this request
+        request.paymentReference = transactionReference;
+        await request.save();
+
+        return {
+            success: true,
+            message: 'Mentorship renewal payment initiated',
+            paymentLink: paymentResult.data?.link || '',
+            transactionReference: transactionReference,
+            discountedPrice,
+            originalPrice: calculatedPrice,
+            monthlyRate: Math.round(monthlyRate)
+        };
+    } catch (error) {
+        console.error('Renew mentorship error:', error);
+        return { success: false, message: 'Failed to renew mentorship' };
+    }
+};
+
+// ============ Student: Delete/End Mentorship ============
+export const deleteMentorship = async (studentId: string, mentorshipId: string) => {
+    try {
+        const request = await MentorshipRequest.findById(mentorshipId);
+        if (!request) {
+            return { success: false, message: 'Mentorship request not found' };
+        }
+
+        if (request.studentId.toString() !== studentId) {
+            return { success: false, message: 'Unauthorized: You can only delete your own mentorships' };
+        }
+
+        // Update status to ended/cancelled
+        request.status = 'ended';
+        await request.save();
+
+        // Notify instructor
+        await createNotification({
+            recipientId: request.instructorId.toString(),
+            recipientType: 'instructor',
+            title: 'Mentorship Ended',
+            message: 'A student has ended their mentorship with you',
+            type: 'info',
+            relatedId: request._id.toString(),
+            relatedType: 'mentorship'
+        });
+
+        // Emit real-time notification
+        emitToUser(request.instructorId.toString(), 'mentorship:ended', {
+            mentorshipId: request._id
+        });
+
+        return {
+            success: true,
+            message: 'Mentorship ended successfully'
+        };
+    } catch (error) {
+        console.error('Delete mentorship error:', error);
+        return { success: false, message: 'Failed to end mentorship' };
     }
 };
 
@@ -605,6 +851,7 @@ export const getStudentMentorships = async (studentId: string) => {
                 mentorshipType: req.mentorshipType,
                 programDuration: req.programDuration,
                 programEndDate: req.programEndDate,
+                originalDuration: req.programDuration, // For renewal calculations
                 mentor: {
                     _id: mentor._id?.toString() ?? '',
                     name: mentor.name ?? '',
@@ -656,10 +903,29 @@ export const completeSuccessfulMentorship = async (transaction: any): Promise<vo
         return;
     }
 
-    request.status = 'active';
-    request.paymentStatus = 'successful';
-    request.amountPaid = transaction.amount;
-    await request.save();
+    // Check if this is a renewal payment
+    const isRenewal = transaction.transactionReference?.includes('MENTOR-RENEW');
+
+    if (isRenewal && request.renewalInfo) {
+        // Handle renewal completion
+        request.status = 'active';
+        request.paymentStatus = 'successful';
+        request.amountPaid = transaction.amount;
+        request.programDuration = request.renewalInfo.newDuration;
+        request.programEndDate = request.renewalInfo.newEndDate;
+        
+        // Clear renewal info after successful payment
+        request.renewalInfo = undefined;
+        await request.save();
+
+        console.log('Mentorship renewal completed successfully');
+    } else {
+        // Handle initial mentorship payment
+        request.status = 'active';
+        request.paymentStatus = 'successful';
+        request.amountPaid = transaction.amount;
+        await request.save();
+    }
 
     // Payment complete — refresh the student's list and drop it from the instructor's pending requests
     await cacheDelPattern(`mentor:student:${transaction.userId.toString()}:*`);

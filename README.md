@@ -95,6 +95,12 @@ pnpm format
 4. Define routes in `src/routes/`
 5. Add middleware as needed in `src/middleware/`
 
+
+## Steps to start redis in the system
+1. sc query type= service state= all | findstr /I Redis
+2. net stop <service_name>
+3. net start <service_name> (e.g., net start Memurai)
+
 ## License
 
 ISC

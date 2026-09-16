@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getStudentStats, getStudentProfile, updateRecommendations, getRecommendedCourses, getMyMentorships } from '../controllers/student.controller';
+import { getStudentStats, getStudentProfile, updateRecommendations, getRecommendedCourses, getMyMentorships, getStudentCertificates } from '../controllers/student.controller';
 import { ProtectMiddleWare } from "../middleware/protect-route";
 import rateLimit from 'express-rate-limit';
 
@@ -22,5 +22,6 @@ router.get('/profile', getStudentProfile);
 router.put('/recommendations', recommendationLimiter, updateRecommendations);
 router.get('/recommended-courses', getRecommendedCourses);
 router.get('/mentorship', getMyMentorships);
+router.get('/certificates', getStudentCertificates);
 
 export default router;

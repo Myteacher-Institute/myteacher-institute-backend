@@ -30,6 +30,14 @@ export const googleCallback = async (
             await ensureAffiliateAccount(user._id.toString(), 'user');
         }
 
+        // Google already verified the identity (email, name, avatar), so the
+        // account never needs a password/onboarding form. This also covers
+        // existing users linking Google for the first time.
+        if (typeof user.hasOnboarded !== 'undefined' && user.googleId && !user.hasOnboarded) {
+            await User.updateOne({ _id: user._id }, { $set: { hasOnboarded: true } });
+            user.hasOnboarded = true;
+        }
+
         const sessionResult = await generateSession({
             ip,
             userAgent,

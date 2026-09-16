@@ -62,14 +62,16 @@ passport.use(
           return done(null, instructor);
         }
 
-        // Create new user
+        // Create new user.
+        // Google already verified the email and provided name/avatar, so the
+        // account is fully provisioned - no password/onboarding form is needed.
         const newUser = await User.create({
           email,
           googleId,
           name,
           profilePicture,
           isEmailVerified: true, // Google accounts are verified
-          hasOnboarded: false,
+          hasOnboarded: true,
           role: 'user',
           hasAffiliateAccount: false,
           affiliate_money: 0,

@@ -77,6 +77,10 @@ export interface GetInstructorMentorRequestsResT {
 export interface AcceptMentorshipReqBody {
     availableTime: string;
     programDuration: string;
+    // Required when the mentorship type is a Group — WhatsApp group invite link
+    groupChatLink?: string;
+    // Instructor-set price for this specific program (overrides the default mentorshipPrice)
+    actualPrice?: number;
 }
 
 export interface AcceptMentorRequestResT {

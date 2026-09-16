@@ -1,11 +1,33 @@
 import cors from 'cors';
-import { adminRouter, authRouter, courseRouter, paymentRouter, youtubeRouter, instructorRouter, driveRouter, userRouter, affiliateRouter, studentRouter, notificationRouter, mentorRouter } from './routes';
+import { adminRouter, authRouter, courseRouter, paymentRouter, youtubeRouter, instructorRouter, driveRouter, userRouter, affiliateRouter, studentRouter, notificationRouter, mentorRouter, chatRouter, pusherRouter, instructorReportRouter } from './routes';
 import path from 'path';
 import { configureScalarDocs } from './config/scalar';
-import express, { type Express, type NextFunction, type Request, type Response } from 'express';
+import express, { type Express, type NextFunction, type Request, type Response, type Router } from 'express';
 import cookieParser from 'cookie-parser';
+import { buildFastApiRouter } from './router/fast-api-router';
 
 import morgan from 'morgan';
+
+// Every API namespace registers here (Express) AND on a find-my-way radix-tree
+// router (mounted first for O(1) route matching). Anything the fast router
+// can't match falls through to the normal Express routers, so no route is lost.
+const apiRouters: { path: string; router: Router }[] = [
+    { path: '/auth', router: authRouter },
+    { path: '/admin', router: adminRouter },
+    { path: '/course', router: courseRouter },
+    { path: '/payment', router: paymentRouter },
+    { path: '/youtube', router: youtubeRouter },
+    { path: '/instructor', router: instructorRouter },
+    { path: '/drive', router: driveRouter },
+    { path: '/user', router: userRouter },
+    { path: '/affiliate', router: affiliateRouter },
+    { path: '/student', router: studentRouter },
+    { path: '/notification', router: notificationRouter },
+    { path: '/mentor', router: mentorRouter },
+    { path: '/chat', router: chatRouter },
+    { path: '/pusher', router: pusherRouter },
+    { path: '/reports', router: instructorReportRouter },
+];
 
 const createApp = (): Express => {
     const app = express();
@@ -20,30 +42,25 @@ const createApp = (): Express => {
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],
     }));
-    
+
     app.use(cookieParser());
-    // Keep the JSON limit bounded — large payloads (profile pictures, files) go
-    // through multer/multipart, never JSON. 10mb still covers the base64
-    // profile picture sent during the apply-as-instructor flow until it is
-    // migrated to the file-upload route too.
-    app.use(express.json({ limit: '100mb' }));
-    app.use(express.urlencoded({ limit: '100mb', extended: true }));
+    // JSON limit sized for the largest chat-file upload: a 100 MB file encodes
+    // to ~133 MB of base64 text. Large chat files are stored in MongoDB via
+    // GridFS (never on the filesystem), so this body limit is the ceiling.
+    app.use(express.json({ limit: '200mb' }));
+    app.use(express.urlencoded({ limit: '200mb', extended: true }));
     app.use('/assets', express.static(path.join(process.cwd(), 'src', 'assets')));
     app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
     app.use(morgan('tiny'));
 
-    app.use('/api/auth', authRouter);
-    app.use("/api/admin", adminRouter);
-    app.use("/api/course", courseRouter);
-    app.use("/api/payment", paymentRouter);
-    app.use("/api/youtube", youtubeRouter);
-    app.use("/api/instructor", instructorRouter);
-    app.use("/api/drive", driveRouter);
-    app.use("/api/user", userRouter);
-    app.use("/api/affiliate", affiliateRouter);
-    app.use("/api/student", studentRouter);
-    app.use("/api/notification", notificationRouter);
-    app.use("/api/mentor", mentorRouter);
+    // Fast radix-tree router for all API routes (falls back to Express below).
+    const fastApi = buildFastApiRouter(apiRouters);
+    app.use('/api', fastApi);
+
+    // Express routers — authoritative fallback + source of truth for what's mounted.
+    for (const { path, router } of apiRouters) {
+        app.use(`/api${path}`, router);
+    }
 
     app.get('/', (_req: Request, res: Response) => {
         res.status(200).json({ status: 'ok', message: 'Service is running' });

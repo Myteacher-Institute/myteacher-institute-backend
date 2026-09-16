@@ -1,7 +1,7 @@
 import { Notification } from '../models';
 import { INotification } from '../models/notification.model';
 import logger from '../utils';
-import { emitToUser } from '../config/socket';
+import { triggerToUser } from '../config/pusher';
 
 export const createNotification = async (data: {
     recipientId: string;
@@ -23,9 +23,9 @@ export const createNotification = async (data: {
             relatedType: data.relatedType,
         });
 
-        // Emit real-time notification via Socket.io
+        // Emit real-time notification via Pusher
         try {
-            emitToUser(data.recipientId, 'notification:new', {
+            triggerToUser(data.recipientId, 'new-notification', {
                 notification: {
                     _id: notification._id.toString(),
                     recipientId: notification.recipientId.toString(),
@@ -42,9 +42,9 @@ export const createNotification = async (data: {
 
             // Emit updated unread count
             const unreadCount = await getUnreadNotificationsCount(data.recipientId, data.recipientType);
-            emitToUser(data.recipientId, 'notification:unread_count', { count: unreadCount });
-        } catch (socketError) {
-            logger.error(`Error emitting notification via socket:  ${(socketError as any)}`);
+            triggerToUser(data.recipientId, 'unread-count-update', { count: unreadCount });
+        } catch (pusherError) {
+            logger.error(`Error emitting notification via Pusher:  ${(pusherError as any)}`);
             // Don't throw - notification was created successfully
         }
 

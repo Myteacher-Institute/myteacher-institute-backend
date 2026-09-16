@@ -8,6 +8,8 @@ import {
     handleAcceptMentorshipRequest,
     handleRejectMentorshipRequest,
     handleCreateMentorshipPayment,
+    handleRenewMentorship,
+    handleDeleteMentorship,
 } from "../controllers/mentor.controller";
 import { ProtectMiddleWare } from "../middleware/protect-route";
 import rateLimit from "express-rate-limit";
@@ -59,6 +61,12 @@ mentorRouter.patch("/become", ProtectMiddleWare, becomeLimiter, handleBecomeMent
 
 // Student — pay for an accepted request (fresh Flutterwave link)
 mentorRouter.post("/requests/:requestId/pay", ProtectMiddleWare, actionLimiter, handleCreateMentorshipPayment);
+
+// Student — renew an ended mentorship
+mentorRouter.post("/mentorships/:mentorshipId/renew", ProtectMiddleWare, actionLimiter, handleRenewMentorship);
+
+// Student — end/delete a mentorship
+mentorRouter.delete("/mentorships/:mentorshipId", ProtectMiddleWare, actionLimiter, handleDeleteMentorship);
 
 // Instructor — incoming requests
 mentorRouter.get("/requests", ProtectMiddleWare, handleGetInstructorMentorRequests);
