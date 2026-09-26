@@ -1,5 +1,5 @@
 import cors from 'cors';
-import { adminRouter, authRouter, courseRouter, paymentRouter, youtubeRouter, instructorRouter, driveRouter, userRouter, affiliateRouter, studentRouter, notificationRouter, mentorRouter, chatRouter, pusherRouter, instructorReportRouter } from './routes';
+import { adminRouter, authRouter, courseRouter, paymentRouter, youtubeRouter, instructorRouter, driveRouter, userRouter, affiliateRouter, studentRouter, notificationRouter, mentorRouter, chatRouter, pusherRouter, instructorReportRouter, announcementRouter, aiTokenRouter } from './routes';
 import path from 'path';
 import { configureScalarDocs } from './config/scalar';
 import express, { type Express, type NextFunction, type Request, type Response, type Router } from 'express';
@@ -27,6 +27,8 @@ const apiRouters: { path: string; router: Router }[] = [
     { path: '/chat', router: chatRouter },
     { path: '/pusher', router: pusherRouter },
     { path: '/reports', router: instructorReportRouter },
+    { path: '/announcement', router: announcementRouter },
+    { path: '/ai-token', router: aiTokenRouter },
 ];
 
 const createApp = (): Express => {

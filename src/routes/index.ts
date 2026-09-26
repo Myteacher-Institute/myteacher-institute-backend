@@ -13,4 +13,6 @@ export { default as studentRouter } from './student.routes';
 export { default as mentorRouter } from './mentor.routes';
 export { default as chatRouter } from './chat.routes';
 export { default as pusherRouter } from './pusher.routes';
+export { default as announcementRouter } from './announcement.routes';
+export { default as aiTokenRouter } from './ai-token.routes';
 export { default as instructorReportRouter } from './instructor-report.routes';

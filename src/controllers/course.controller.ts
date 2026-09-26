@@ -1093,6 +1093,10 @@ const handleInstructorStatistics = async (req: Request, res: Response) => {
         const prevMonth = prevMonthDate.toISOString().slice(0, 7);
         const prevYear = prevMonthDate.getFullYear();
 
+        // Fetch instructor's moneyMade field (the authoritative source for earnings)
+        const instructor = await Instructor.findById(instructorId).select('moneyMade').lean();
+        const totalEarnings = instructor?.moneyMade || 0;
+
         // Fetch only the fields we need for calculations (much faster)
         const courses = await Course.find(
             { 'instructorDetails.userId': instructorId },
@@ -1106,15 +1110,6 @@ const handleInstructorStatistics = async (req: Request, res: Response) => {
 
         // Total courses
         const totalCourses = courses.length;
-
-        // Calculate total earnings (price * number of students for each course)
-        // Company takes 30%, instructor gets 70%
-        const totalEarnings = courses.reduce((sum, course) => {
-            const studentCount = course.appliedUsers?.length || 0;
-            const courseRevenue = course.price * studentCount;
-            const instructorShare = courseRevenue * 0.7; // 70% after 30% company commission
-            return sum + instructorShare;
-        }, 0);
 
         // Calculate average rating from courses
         const averageRating = courses.length > 0 
@@ -1173,6 +1168,64 @@ const handleInstructorStatistics = async (req: Request, res: Response) => {
 
     } catch (error) {
         console.error('Instructor statistics error --->', (error as Error)?.message ?? error);
+        res.status(500).json({
+            status: "failed",
+            message: "Internal server error"
+        });
+    }
+};
+
+const handleInstructorReviews = async (req: Request, res: Response) => {
+    try {
+        const instructorId = req.userId;
+
+        if (!instructorId) {
+            return res.status(401).json({
+                status: "failed",
+                message: "Unauthorized: Instructor ID not found"
+            });
+        }
+
+        // Fetch all courses for this instructor with their ratings
+        const courses = await Course.find(
+            { 'instructorDetails.userId': instructorId },
+            {
+                courseName: 1,
+                ratings: 1,
+                averageRating: 1
+            }
+        ).lean();
+
+        // Flatten all reviews from all courses
+        const allReviews: any[] = [];
+        courses.forEach(course => {
+            if (course.ratings && course.ratings.length > 0) {
+                course.ratings.forEach((rating: any) => {
+                    allReviews.push({
+                        ...rating,
+                        courseName: course.courseName,
+                        courseId: course._id,
+                        averageRating: course.averageRating
+                    });
+                });
+            }
+        });
+
+        // Sort by most recent
+        allReviews.sort((a, b) => {
+            const dateA = new Date(a.ratedAt || 0);
+            const dateB = new Date(b.ratedAt || 0);
+            return dateB.getTime() - dateA.getTime();
+        });
+
+        return res.status(200).json({
+            status: "success",
+            reviews: allReviews,
+            totalReviews: allReviews.length
+        });
+
+    } catch (error) {
+        console.error('Instructor reviews error --->', (error as Error)?.message ?? error);
         res.status(500).json({
             status: "failed",
             message: "Internal server error"
@@ -1536,5 +1589,6 @@ export {
     handleRetryDeletion,
     handleDeleteOnly,
     handleAddRating,
-    handleInstructorStatistics
+    handleInstructorStatistics,
+    handleInstructorReviews
 };

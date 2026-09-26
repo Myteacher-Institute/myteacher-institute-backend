@@ -29,51 +29,55 @@ const userSchema = new mongoose.Schema<IUser>({
         ref: 'course'
     },
     hasOnboarded: {
-      type: Boolean,
-      default: false,
+        type: Boolean,
+        default: false,
     },
     role: {
-      type: String,
-      enum: ["user", "instructor", "admin"]
+        type: String,
+        enum: ["user", "instructor", "admin"]
     },
     isOnline: {
-      type: Boolean,
-      default: false
+        type: Boolean,
+        default: false
     },
     lastSeen: {
-      type: Date
+        type: Date
     },
     socketId: {
-      type: String
+        type: String
     },
     profilePicture: {
-      type: String
+        type: String
     },
     hasAffiliateAccount: {
-      type: Boolean,
-      default: false
+        type: Boolean,
+        default: false
     },
     affiliate_id: {
-      type: String,
-      unique: true,
-      sparse: true
+        type: String,
+        unique: true,
+        sparse: true
     },
     affiliate_money: {
-      type: Number,
-      default: 0
+        type: Number,
+        default: 0
     },
     googleId: {
-      type: String,
-      unique: true,
-      sparse: true
+        type: String,
+        unique: true,
+        sparse: true
     },
     recommendations: {
-      type: [String],
-      default: []
+        type: [String],
+        default: []
     },
     recommendationsProvided: {
-      type: Boolean,
-      default: false
+        type: Boolean,
+        default: false
+    },
+    aiTokens: {
+        type: Number,
+        default: 200
     }
 }, {
     timestamps: true
@@ -83,5 +87,3 @@ const User = mongoose.model('user', userSchema);
 
 export default User;
 export type { IUser };
-
-

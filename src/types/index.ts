@@ -22,6 +22,7 @@ export interface IUser extends mongoose.Document {
     googleId?: string;
     recommendations?: string[];
     recommendationsProvided?: boolean;
+    aiTokens?: number;
     // Provided by mongoose timestamps option on the user schema
     createdAt: Date;
     updatedAt: Date;

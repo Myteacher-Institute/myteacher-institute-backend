@@ -934,10 +934,40 @@ export const completeSuccessfulMentorship = async (transaction: any): Promise<vo
     const instructor = await Instructor.findById(request.instructorId);
     const student = await User.findById(request.studentId);
 
-    // Revenue split — company keeps 30%, instructor receives 70%
+    // Revenue split — 70/30 (instructor/company) by default, or
+    // 50/30/20 (instructor/company/affiliate) when the sale was referred.
+    let instructorShare = 0;
     try {
-        const instructorShare = transaction.amount * 0.7;
-        const companyShare = transaction.amount * 0.3;
+        const hasAffiliate = transaction.affiliateId && transaction.affiliateType;
+        let affiliateShare = 0;
+
+        if (hasAffiliate) {
+            const affiliateOwnsMentorship =
+                transaction.affiliateType === 'instructor' &&
+                request.instructorId.toString() === transaction.affiliateId.toString();
+            const affiliateIsBuyer =
+                transaction.affiliateType === 'user' &&
+                transaction.affiliateId.toString() === transaction.userId.toString();
+
+            if (!affiliateOwnsMentorship && !affiliateIsBuyer) {
+                affiliateShare = transaction.amount * 0.2;
+                instructorShare = transaction.amount * 0.5;
+
+                if (transaction.affiliateType === 'instructor') {
+                    await Instructor.findByIdAndUpdate(transaction.affiliateId, {
+                        $inc: { affiliate_money: affiliateShare }
+                    });
+                } else {
+                    await User.findByIdAndUpdate(transaction.affiliateId, {
+                        $inc: { affiliate_money: affiliateShare }
+                    });
+                }
+            }
+        }
+
+        if (instructorShare === 0) {
+            instructorShare = transaction.amount * 0.7;
+        }
 
         if (instructor) {
             await Instructor.findByIdAndUpdate(instructor._id, {
@@ -945,6 +975,8 @@ export const completeSuccessfulMentorship = async (transaction: any): Promise<vo
             });
         }
 
+        // Company share — 30% of every mentorship sale is recorded
+        const companyShare = transaction.amount * 0.3;
         await CompanyMoney.create({
             transactionReference: transaction.transactionReference,
             userId: transaction.userId,

@@ -23,6 +23,7 @@ export const createPaymentLink = async (params: {
     customizations?: {
         title: string;
         description: string;
+        logo?: string;
     };
 }): Promise<FlutterwavePaymentResponse> => {
     try {
@@ -31,12 +32,15 @@ export const createPaymentLink = async (params: {
             amount: params.amount,
             currency: params.currency,
             redirect_url: params.redirect_url,
+            payment_options: 'card,ussd,banktransfer', // Add payment options
             customer: params.customer,
             customizations: params.customizations || {
                 title: 'Course Purchase',
                 description: 'Purchase course on MyTeacher Institute'
             }
         };
+
+        console.log('Flutterwave payment request payload:', payload);
 
         const response = await fetch('https://api.flutterwave.com/v3/payments', {
             method: 'POST',

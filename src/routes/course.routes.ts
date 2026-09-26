@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { isInstructor } from "../middleware/is-instructor";
 import { ProtectMiddleWare } from "../middleware/protect-route";
-import { handleAddCourse, handleCourseEdit, handleFetchCourseById, handleFetchCoursePreview, handleFetchCoursesByAppliedUser, handleFetchAllCourses, handleBrowseCourses, handleFetchCoursesByInstructor, handleDeleteCourse, handleRetryDeletion, handleDeleteOnly, handleAddRating, handleInstructorStatistics } from "../controllers/course.controller";
+import { handleAddCourse, handleCourseEdit, handleFetchCourseById, handleFetchCoursePreview, handleFetchCoursesByAppliedUser, handleFetchAllCourses, handleBrowseCourses, handleFetchCoursesByInstructor, handleDeleteCourse, handleRetryDeletion, handleDeleteOnly, handleAddRating, handleInstructorStatistics, handleInstructorReviews } from "../controllers/course.controller";
 import { handleCreateCourseCreation, handleCreateCourseEdit, handleFetchActiveCourseCreations, upload as courseCreationUpload } from "../controllers/course-creation.controller";
 import rateLimit from "express-rate-limit";
 
@@ -54,6 +54,9 @@ courseRouter.get("/instructor-courses", ProtectMiddleWare, isInstructor, handleF
 
 // Get instructor statistics (instructor only)
 courseRouter.get("/instructor-statistics", ProtectMiddleWare, isInstructor, handleInstructorStatistics);
+
+// Get instructor reviews (instructor only)
+courseRouter.get("/instructor-reviews", ProtectMiddleWare, isInstructor, handleInstructorReviews);
 
 // Add rating to course (protected route - students only)
 courseRouter.post("/:courseId/rating", ProtectMiddleWare, courseOperationLimiter, handleAddRating);
