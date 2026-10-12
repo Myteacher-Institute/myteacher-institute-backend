@@ -1,5 +1,5 @@
 import express, { Router } from 'express';
-import { activateAffiliateAccount, generateAffiliateLink, getAffiliateStats, getAffiliateStatus } from '../controllers/affiliate.controller';
+import { activateAffiliateAccount, generateAffiliateLink, getAffiliateStats, getAffiliateStatus, getRecentReferrals, createWithdrawal, getWithdrawals, adminProcessWithdrawal, getAdminPendingWithdrawals, getBanks } from '../controllers/affiliate.controller';
 import { ProtectMiddleWare } from '../middleware/protect-route';
 import rateLimit from "express-rate-limit";
 
@@ -29,5 +29,21 @@ router.post('/generate-link', generateAffiliateLink);
 
 // Get affiliate statistics
 router.post('/stats', getAffiliateStats);
+
+// Get recent referrals
+router.get('/referrals', getRecentReferrals);
+
+// Create withdrawal request
+router.post('/withdrawal', createWithdrawal);
+
+// Get withdrawal history
+router.get('/withdrawals', getWithdrawals);
+
+// Admin routes
+router.post('/admin/withdrawals/:withdrawalId/process', adminProcessWithdrawal);
+router.get('/admin/withdrawals/pending', getAdminPendingWithdrawals);
+
+// Get bank list for withdrawals
+router.get('/banks', getBanks);
 
 export default router;

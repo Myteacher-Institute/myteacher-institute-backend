@@ -17,6 +17,7 @@ import { createNotification } from '../services/notification.service';
 import { sendCoursePurchaseEmail } from '../services/email.service';
 import { completeSuccessfulMentorship } from '../services/mentor.service';
 import { cacheDelPattern } from '../config/redis';
+import { trackAffiliateEnrollment, processAffiliateEarnings } from '../services/affiliate-tracking.service';
 
 const ALLOWED_REDIRECT_ORIGINS = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
@@ -271,6 +272,25 @@ const completeSuccessfulPurchase = async (transaction: any, request: Request) =>
                         if (!affiliateOwnsCourse && !affiliateIsBuyer) {
                             affiliateShare = transaction.amount * 0.2;
                             instructorShare = transaction.amount * 0.5;
+
+                            // Track affiliate enrollment
+                            await trackAffiliateEnrollment(
+                                transaction.affiliateId.toString(),
+                                transaction.affiliateType,
+                                user._id.toString(),
+                                course._id.toString(),
+                                transaction.amount,
+                                `${process.env.FRONTEND_URL || 'http://localhost:3000'}/course/${course._id}?affiliate=${transaction.affiliateId}`
+                            );
+
+                            // Process affiliate earnings immediately
+                            await processAffiliateEarnings(
+                                transaction.affiliateId.toString(),
+                                transaction.affiliateType,
+                                user._id.toString(),
+                                course._id.toString(),
+                                transaction.amount
+                            );
 
                             if (transaction.affiliateType === 'instructor') {
                                 await Instructor.findByIdAndUpdate(transaction.affiliateId, {
