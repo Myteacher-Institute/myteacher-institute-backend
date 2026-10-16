@@ -1,7 +1,7 @@
 import passport from 'passport';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Strategy as GoogleStrategy, VerifyCallback } from 'passport-google-oauth20';
 import User from '../models/user.model';
-import Instructor from '../models/instructor.model';
+import { Instructor } from '../models/instructor.model';
 
 // Configure Google OAuth Strategy
 passport.use(
@@ -11,7 +11,7 @@ passport.use(
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
       callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback',
     },
-    async (accessToken, refreshToken, profile, done) => {
+    async (accessToken: string, refreshToken: string, profile: any, done: VerifyCallback) => {
       try {
         const email = profile.emails?.[0]?.value;
         const googleId = profile.id;
@@ -46,7 +46,7 @@ passport.use(
         let instructor = await Instructor.findOne({ googleId });
 
         if (instructor) {
-          return done(null, instructor);
+          return done(null, instructor as any);
         }
 
         // Check if instructor exists with email
@@ -59,7 +59,7 @@ passport.use(
             instructor.profilePicture = profilePicture;
           }
           await instructor.save();
-          return done(null, instructor);
+          return done(null, instructor as any);
         }
 
         // Create new user.
@@ -86,15 +86,15 @@ passport.use(
 );
 
 // Serialize user for session
-passport.serializeUser((user: any, done) => {
+passport.serializeUser((user: any, done: VerifyCallback) => {
   done(null, user._id);
 });
 
 // Deserialize user from session
-passport.deserializeUser(async (id: string, done) => {
+passport.deserializeUser(async (id: string, done: VerifyCallback) => {
   try {
     const user = await User.findById(id) || await Instructor.findById(id);
-    done(null, user);
+    done(null, user || false);
   } catch (error) {
     done(error as Error);
   }

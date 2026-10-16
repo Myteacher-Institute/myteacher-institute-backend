@@ -1,5 +1,5 @@
 import InstructorReport from "../models/instructor-report.model";
-import Instructor from "../models/instructor.model";
+import { Instructor } from "../models/instructor.model";
 import User from "../models/user.model";
 import { createNotification } from "./notification.service";
 import { emitToUser } from "../config/socket";
@@ -49,13 +49,13 @@ export const reportInstructor = async (
 
         // Notify admin (you would need to implement admin notification logic)
         // For now, we'll create a notification for the instructor
-        await createNotification(
-            instructorId,
-            'instructor',
-            'report_filed',
-            `A student has filed a report against you. Reason: ${reason}`,
-            `/instructor/reports`
-        );
+        await createNotification({
+            recipientId: instructorId,
+            recipientType: 'instructor',
+            title: 'report_filed',
+            message: `A student has filed a report against you. Reason: ${reason}`,
+            relatedType: 'report'
+        });
 
         // Emit real-time notification to instructor
         emitToUser(instructorId, 'report:filed', {
@@ -118,23 +118,23 @@ export const updateReportStatus = async (
         await report.save();
 
         // Notify student about the status update
-        await createNotification(
-            report.studentId.toString(),
-            'user',
-            'report_updated',
-            `Your report against ${report.instructorName} has been updated to: ${status}`,
-            '/student/reports'
-        );
+        await createNotification({
+            recipientId: report.studentId.toString(),
+            recipientType: 'user',
+            title: 'report_updated',
+            message: `Your report against ${report.instructorName} has been updated to: ${status}`,
+            relatedType: 'report'
+        });
 
         // Notify instructor if resolved
         if (status === 'resolved' || status === 'dismissed') {
-            await createNotification(
-                report.instructorId.toString(),
-                'instructor',
-                'report_resolved',
-                `The report filed against you has been ${status}`,
-                '/instructor/reports'
-            );
+            await createNotification({
+                recipientId: report.instructorId.toString(),
+                recipientType: 'instructor',
+                title: 'report_resolved',
+                message: `The report filed against you has been ${status}`,
+                relatedType: 'report'
+            });
         }
 
         return {

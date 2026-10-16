@@ -68,7 +68,7 @@ export const handleUpdateReportStatus = async (req: Request, res: Response) => {
             return res.status(400).json({ status: 'error', message: 'Invalid status' });
         }
 
-        const result = await updateReportStatus(reportId, status, adminNotes);
+        const result = await updateReportStatus(Array.isArray(reportId) ? reportId[0] : reportId, status, adminNotes);
 
         if (!result.success) {
             return res.status(400).json({ status: 'error', message: result.message });

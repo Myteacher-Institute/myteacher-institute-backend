@@ -8,13 +8,6 @@ export const youtubeUploadValidation = (body: YouTubeUploadReqBody, instructorId
         };
     }
 
-    if (!body.videoPath) {
-        return {
-            isValid: false,
-            message: "Video path is required"
-        };
-    }
-
     if (body.privacyStatus && !["public", "private", "unlisted"].includes(body.privacyStatus)) {
         return {
             isValid: false,

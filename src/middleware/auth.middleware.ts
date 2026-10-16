@@ -4,11 +4,9 @@ import { ProtectMiddleWare } from './protect-route';
 
 declare global {
   namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        role: 'admin' | 'instructor' | 'user';
-      };
+    interface User {
+      id: string;
+      role: 'admin' | 'instructor' | 'user';
     }
   }
 }

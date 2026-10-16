@@ -4,7 +4,7 @@ export const reportBug = async (userId: string, userType: string, bugData: any) 
     try {
         const bugReport = await BugReport.create({
             userId,
-            userType,
+            userType: userType as "user" | "instructor" | "admin",
             title: bugData.title,
             description: bugData.description,
             priority: bugData.priority || "medium",

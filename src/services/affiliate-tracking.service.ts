@@ -128,7 +128,7 @@ export const processAffiliateEarnings = async (
 
         // Update affiliate's earnings in their account
         const Model = affiliateType === 'user' ? User : Instructor;
-        await Model.findByIdAndUpdate(affiliateId, {
+        await (Model as any).findByIdAndUpdate(affiliateId, {
             $inc: { affiliate_money: earnings }
         });
 
@@ -176,7 +176,7 @@ export const getAffiliateStatistics = async (
 
         // Get user's current balance
         const Model = affiliateType === 'user' ? User : Instructor;
-        const user = await Model.findById(affiliateId);
+        const user = await (Model as any).findById(affiliateId);
         const currentBalance = user?.affiliate_money || 0;
 
         // Calculate withdrawn amount (total earnings - current balance - pending)

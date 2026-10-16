@@ -7,7 +7,7 @@ export interface YouTubeUploadReqBody {
 }
 
 export interface YouTubeUploadResT {
-    status: "success" | "failed" | "reauth_required";
+    status: "success" | "failed" | "reauth_required" | "queued";
     message: string;
     videoId?: string | null;
     videoUrl?: string;

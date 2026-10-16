@@ -40,11 +40,19 @@ export const generateJWT = (args: generateJWT): string | 'error' => {
 
     if (type === 'access') {
       const secret = config['JWT_ACCESS_TOKEN_SECRET'];
+      if (!secret) {
+        logger.error('JWT_ACCESS_TOKEN_SECRET is not defined');
+        return 'error';
+      }
       const token = jwt.sign({ userId, sessionId }, secret, { expiresIn: '15m' });
       return token;
     }
 
     const secret = config['JWT_REFRESH_TOKEN_SECRET'];
+    if (!secret) {
+      logger.error('JWT_REFRESH_TOKEN_SECRET is not defined');
+      return 'error';
+    }
     const token = jwt.sign({ userId, sessionId }, secret, { expiresIn: '7d' });
     return token;
   } catch (error) {
@@ -121,11 +129,19 @@ export const generateJWTCookie = (args: generateJWTCookieT): string | "error" =>
 
         if (type === "access") {
             const secret = config["JWT_ACCESS_TOKEN_SECRET"]
+            if (!secret) {
+                logger.error('JWT_ACCESS_TOKEN_SECRET is not defined');
+                return "error";
+            }
             const token = jwt.sign({ userId }, secret, { expiresIn: '15m' });
             return token;
         }
 
         const secret = config["JWT_REFRESH_TOKEN_SECRET"]
+        if (!secret) {
+            logger.error('JWT_REFRESH_TOKEN_SECRET is not defined');
+            return "error";
+        }
         const token = jwt.sign({ userId }, secret, { expiresIn: '7d' });
         return token;
 

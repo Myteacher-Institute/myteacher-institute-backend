@@ -26,8 +26,8 @@ const handleCreateAnnouncement = async (req: Request<{}, {}, { title: string; co
             title,
             content,
             createdBy: new mongoose.Types.ObjectId(adminId),
-            targetAudience,
-            priority,
+            targetAudience: targetAudience as 'all' | 'instructors' | 'students',
+            priority: priority as 'low' | 'medium' | 'high',
             isActive: true
         });
 

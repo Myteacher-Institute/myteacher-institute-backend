@@ -52,7 +52,7 @@ export const verifyPassword = async (
             return {
                 status: 200,
                 body: { status: 'success', isTrusted: true, message: 'Welcome back! You have successfully logged in to your account.', access_code: access_code as string },
-                cookie: { name: config['REFRESH_TOKEN_COOKIE_NAME'], value: sessionResult.token },
+                cookie: { name: config['REFRESH_TOKEN_COOKIE_NAME'] || 'refresh_token', value: sessionResult.token },
             };
         }
 

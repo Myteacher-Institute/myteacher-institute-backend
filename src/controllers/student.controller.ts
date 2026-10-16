@@ -219,9 +219,9 @@ export const getStudentCertificates = async (req: Request, res: Response) => {
     }
 
     // Get courses where the student is enrolled and has a certificate
-    const courses = await Course.find({ 
+    const courses = await Course.find({
       'appliedUsers.userId': userId,
-      certificate: { $exists: true, $ne: null, $ne: '' }
+      certificate: { $exists: true, $ne: null }
     })
     .select('courseName description duration certificate instructorDetails averageRating createdAt')
     .sort({ createdAt: -1 });
@@ -246,8 +246,8 @@ export const getStudentCertificates = async (req: Request, res: Response) => {
       certificate: course.certificate,
       instructorDetails: course.instructorDetails,
       averageRating: course.averageRating,
-      completedAt: course.createdAt, // This would ideally be the actual completion date
-      completionDate: course.createdAt
+      completedAt: (course as any).createdAt, // This would ideally be the actual completion date
+      completionDate: (course as any).createdAt
     }));
 
     res.status(200).json({

@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import axios from 'axios';
 import User from "../models/user.model";
 import AITokenUsage from "../models/ai-token-usage.model";
 import { calculateTokenCost } from "../services/ai-token.service";
@@ -66,25 +65,48 @@ const handleAIChat = async (req: Request<{}, {}, ChatRequest>, res: Response) =>
 
     // Call OpenAI API
     console.log('Calling OpenAI API with message:', message);
-    const openaiResponse = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_SECRET_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
         model: 'gpt-3.5-turbo',
         messages: messages,
         max_tokens: 500,
         temperature: 0.7
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENAI_SECRET_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 30000 // 30 second timeout
-      }
-    );
+      }),
+      signal: controller.signal
+    });
 
-    const aiResponse = openaiResponse.data.choices[0]?.message?.content || "I apologize, but I couldn't generate a response. Please try again.";
-    const usage = openaiResponse.data.usage;
+    clearTimeout(timeoutId);
+
+    if (!openaiResponse.ok) {
+      const errorData = await openaiResponse.json().catch(() => ({}));
+      throw new Error(`OpenAI API error: ${openaiResponse.status} ${JSON.stringify(errorData)}`);
+    }
+
+    const responseData = await openaiResponse.json() as {
+      choices: Array<{ message: { content: string } }>;
+      usage: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+        prompt_tokens_details?: {
+          cached_tokens?: number;
+          cache_write_tokens?: number;
+        };
+        completion_tokens_details?: {
+          reasoning_tokens?: number;
+        };
+      };
+    };
+    const aiResponse = responseData.choices[0]?.message?.content || "I apologize, but I couldn't generate a response. Please try again.";
+    const usage = responseData.usage;
 
     // Calculate token cost
     const cost = calculateTokenCost('gpt-3.5-turbo', {
@@ -144,35 +166,37 @@ const handleAIChat = async (req: Request<{}, {}, ChatRequest>, res: Response) =>
 
   } catch (error) {
     console.error('AI chat error --->', (error as Error)?.message ?? error);
-    
+
     // Handle OpenAI API errors
-    if (axios.isAxiosError(error)) {
-      console.error('OpenAI API error details:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        headers: error.response?.headers
-      });
-      
-      if (error.response?.status === 401) {
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        return res.status(408).json({
+          status: "failed",
+          message: "Request timeout. Please try again."
+        });
+      }
+
+      const errorMessage = error.message;
+      if (errorMessage.includes('401')) {
         return res.status(500).json({
           status: "failed",
           message: "OpenAI API authentication failed. Please check the API key configuration."
         });
       }
-      if (error.response?.status === 429) {
+      if (errorMessage.includes('429')) {
         return res.status(429).json({
           status: "failed",
           message: "OpenAI API rate limit exceeded. Please try again in a few moments."
         });
       }
-      if (error.response?.status === 400) {
+      if (errorMessage.includes('400')) {
         return res.status(400).json({
           status: "failed",
           message: "Invalid request to OpenAI API"
         });
       }
     }
-    
+
     res.status(500).json({
       status: "failed",
       message: "Internal server error"
