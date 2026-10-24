@@ -33,7 +33,7 @@ export const googleCallback = async (
         // Google already verified the identity (email, name, avatar), so the
         // account never needs a password/onboarding form. This also covers
         // existing users linking Google for the first time.
-        if (typeof user.hasOnboarded !== 'undefined' && user.googleId && !user.hasOnboarded) {
+        if (user.googleId && user.hasOnboarded !== true) {
             await User.updateOne({ _id: user._id }, { $set: { hasOnboarded: true } });
             user.hasOnboarded = true;
         }
@@ -66,7 +66,7 @@ export const googleCallback = async (
             } else {
                 redirectUrl = `${FRONTEND_OAUTH_URL}?status=success&redirect=/instructor`;
             }
-        } else if (!user.hasOnboarded) {
+        } else if (user.hasOnboarded !== true) {
             redirectUrl = `${FRONTEND_OAUTH_URL}?status=needs_onboarding`;
         } else {
             redirectUrl = `${FRONTEND_OAUTH_URL}?status=success&redirect=/dashboard`;
