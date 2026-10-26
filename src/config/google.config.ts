@@ -2,6 +2,7 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy, VerifyCallback } from 'passport-google-oauth20';
 import User from '../models/user.model';
 import { Instructor } from '../models/instructor.model';
+import logger from '../utils';
 
 // Configure Google OAuth Strategy
 passport.use(
@@ -18,7 +19,10 @@ passport.use(
         const name = profile.displayName || profile.name?.givenName + ' ' + profile.name?.familyName;
         const profilePicture = profile.photos?.[0]?.value;
 
+        logger.info(`Google OAuth attempt for email: ${email}, googleId: ${googleId}`);
+
         if (!email) {
+          logger.error('No email found in Google profile');
           return done(new Error('No email found in Google profile'));
         }
 
@@ -26,6 +30,7 @@ passport.use(
         let user = await User.findOne({ googleId });
 
         if (user) {
+          logger.info(`Existing user found with googleId: ${googleId}`);
           return done(null, user);
         }
 
@@ -34,6 +39,7 @@ passport.use(
 
         if (user) {
           // Link Google account to existing user
+          logger.info(`Linking Google account to existing user with email: ${email}`);
           user.googleId = googleId;
           if (!user.profilePicture && profilePicture) {
             user.profilePicture = profilePicture;
@@ -46,6 +52,7 @@ passport.use(
         let instructor = await Instructor.findOne({ googleId });
 
         if (instructor) {
+          logger.info(`Existing instructor found with googleId: ${googleId}`);
           return done(null, instructor as any);
         }
 
@@ -54,6 +61,7 @@ passport.use(
 
         if (instructor) {
           // Link Google account to existing instructor
+          logger.info(`Linking Google account to existing instructor with email: ${email}`);
           instructor.googleId = googleId;
           if (!instructor.profilePicture && profilePicture) {
             instructor.profilePicture = profilePicture;
@@ -65,6 +73,7 @@ passport.use(
         // Create new user.
         // Google already verified the email and provided name/avatar, so the
         // account is fully provisioned - no password/onboarding form is needed.
+        logger.info(`Creating new user with Google OAuth: ${email}`);
         const newUser = await User.create({
           email,
           googleId,
@@ -77,8 +86,10 @@ passport.use(
           affiliate_money: 0,
         });
 
+        logger.info(`Successfully created new user with ID: ${newUser._id}`);
         return done(null, newUser);
       } catch (error) {
+        logger.error(`Google OAuth error: ${(error as Error)?.message ?? error}`);
         return done(error as Error);
       }
     }

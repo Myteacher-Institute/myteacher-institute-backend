@@ -4,7 +4,10 @@ import { IUser } from '../types';
 const userSchema = new mongoose.Schema<IUser>({
     password: {
         type: String,
-        required: true,
+        required: function(this: any) {
+            // Password is required only if googleId is not present
+            return !this.googleId;
+        },
         minlength: 6
     },
     email: {

@@ -2,34 +2,46 @@ import mongoose, { Schema } from "mongoose";
 import { IInstructor } from "../types";
 
 const instructorSchema = new Schema<IInstructor>({
-    name: { 
-        type: String, 
-        required: true 
+    name: {
+        type: String,
+        required: true
     },
-    email: { 
-        type: String, 
-        required: true, 
-        unique: true 
+    email: {
+        type: String,
+        required: true,
+        unique: true
     },
-    profilePicture: { 
-        type: String, 
-        required: true 
+    profilePicture: {
+        type: String,
+        required: function(this: any) {
+            // Profile picture is required only if googleId is not present
+            return !this.googleId;
+        }
     },
-    phone: { 
-        type: String, 
-        required: true 
+    phone: {
+        type: String,
+        required: function(this: any) {
+            // Phone is required only if googleId is not present
+            return !this.googleId;
+        }
     },
-    courses: [{ 
-        type: Schema.Types.ObjectId, 
-        ref: "Course" 
+    courses: [{
+        type: Schema.Types.ObjectId,
+        ref: "Course"
     }],
-    specialization: { 
-        type: String, 
-        required: true 
+    specialization: {
+        type: String,
+        required: function(this: any) {
+            // Specialization is required only if googleId is not present
+            return !this.googleId;
+        }
     },
-    password: { 
-        type: String, 
-        required: true 
+    password: {
+        type: String,
+        required: function(this: any) {
+            // Password is required only if googleId is not present
+            return !this.googleId;
+        }
     },
     moneyMade: { type: Number, default: 0 },
     isVerified: { type: Boolean, default: false },
