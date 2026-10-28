@@ -37,6 +37,7 @@ export interface CourseChapter {
 export interface ICourse extends mongoose.Document {
     courseName: string;
     description: string;
+    category: 'Web Development' | 'Data Science' | 'Design' | 'Business';
     chapters: CourseChapter[];
     courseVideos: {
         videoUrl: string;
@@ -99,6 +100,7 @@ export interface ICourse extends mongoose.Document {
 export type AddCourseReqBody = {
     courseName: string;
     description: string;
+    category: 'Web Development' | 'Data Science' | 'Design' | 'Business';
     chapters?: CourseChapter[];
     courseVideos: Array<{
         videoUrl: string;
@@ -185,6 +187,7 @@ export type BrowseCoursesResT = {
 export type EditCourseReqBody = {
     courseName?: string;
     description?: string;
+    category?: 'Web Development' | 'Data Science' | 'Design' | 'Business';
     chapters?: CourseChapter[];
     courseVideos?: Array<{
         videoUrl: string;
@@ -256,4 +259,32 @@ export type CoursePreviewResT = {
             videoDuration: number;
         }>;
     };
+}
+
+export type PopularCourse = {
+    _id: string;
+    courseName: string;
+    description: string;
+    ratings: Array<{
+        userId: mongoose.Types.ObjectId;
+        userName: string;
+        rating: number;
+        comment: string;
+        ratedAt: Date;
+    }>;
+    averageRating: number;
+    price: number;
+    duration: number;
+    previewVideo?: {
+        videoUrl: string;
+        videoTitle: string;
+        videoDescription: string;
+        videoDuration: number;
+    };
+}
+
+export type FetchPopularCoursesResT = {
+    status: "success" | "failed";
+    message: string;
+    courses?: PopularCourse[];
 }

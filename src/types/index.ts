@@ -28,7 +28,7 @@ export interface IUser extends mongoose.Document {
     updatedAt: Date;
 }
 
-import { ICourse, AddCourseReqBody, AddCourseResT, FetchCoursesByUserReqBody, FetchCoursesByUserResT, FetchAllCoursesResT, BrowseCoursesResT, EditCourseReqBody, EditCourseResT, FetchCourseByIdResT, CoursePreviewResT } from './course.type';
+import { ICourse, AddCourseReqBody, AddCourseResT, FetchCoursesByUserReqBody, FetchCoursesByUserResT, FetchAllCoursesResT, BrowseCoursesResT, EditCourseReqBody, EditCourseResT, FetchCourseByIdResT, CoursePreviewResT, PopularCourse, FetchPopularCoursesResT } from './course.type';
 
 import { IAdmin, AddAdminReqBody, AddAdminResT, AdminLoginReqBody, AdminLoginResT, VerifyAdminOtpReqBody, VerifyAdminOtpResT, ResendAdminOtpReqBody, ResendAdminOtpResT, SendAdminResetCodeReqBody, SendAdminResetCodeResT, ResetAdminPasswordReqBody, ResetAdminPasswordResT } from './admin.type';
 
@@ -43,6 +43,8 @@ import { ICompanyMoney } from './company-money.type';
 import { ICourseCreationJob, CreateCourseCreationReqBody, CreateCourseCreationResT, FetchActiveCourseCreationsResT, ActiveCourseCreationJob, CourseCreationStatus, CourseCreationStage, CourseCreationPayload, CourseCreationVideoFile, CourseCreationAssetFile, CourseCreationResultVideo, CourseCreationResultAsset } from './course-creation.type';
 
 import { BecomeMentorReqBody, BecomeMentorResT, GetMentorStatusResT, MentorListItem, GetAllMentorsResT, RequestMentorshipReqBody, RequestMentorshipResT, GetInstructorMentorRequestsResT, AcceptMentorshipReqBody, AcceptMentorRequestResT, StudentMentorshipItem, GetStudentMentorshipsResT, CreateMentorshipPaymentReqBody, CreateMentorshipPaymentResT } from './mentorship.type';
+
+import { ICommunity, CreateCommunityReqBody, CreateCommunityResT, GetAllCommunitiesResT, GetCommunityByIdResT, JoinCommunityResT, PostContentReqBody, PostContentResT, LikePostResT, CommentPostReqBody, CommentPostResT } from './community.type';
 
 
 
@@ -83,6 +85,8 @@ export type {
     EditCourseResT,
     FetchCourseByIdResT,
     CoursePreviewResT,
+    PopularCourse,
+    FetchPopularCoursesResT,
     IAdmin,
     AddAdminReqBody,
     AddAdminResT,
@@ -136,5 +140,16 @@ export type {
     StudentMentorshipItem,
     GetStudentMentorshipsResT,
     CreateMentorshipPaymentReqBody,
-    CreateMentorshipPaymentResT
+    CreateMentorshipPaymentResT,
+    ICommunity,
+    CreateCommunityReqBody,
+    CreateCommunityResT,
+    GetAllCommunitiesResT,
+    GetCommunityByIdResT,
+    JoinCommunityResT,
+    PostContentReqBody,
+    PostContentResT,
+    LikePostResT,
+    CommentPostReqBody,
+    CommentPostResT
 };

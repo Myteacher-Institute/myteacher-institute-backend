@@ -1,5 +1,5 @@
-const addCourseValidation = (payload: { courseName?: string; description?: string; chapters?: any[]; courseVideos?: any[]; courseRequirements?: any[]; price?: number; duration?: number; certificate?: string; programmingCodes?: any[]; assets?: any[]; quizzes?: any[] }, instructorId?: string) => {
-    const { courseName, description, chapters, courseVideos, courseRequirements, price, duration, certificate, programmingCodes, assets, quizzes } = payload;
+const addCourseValidation = (payload: { courseName?: string; description?: string; category?: string; chapters?: any[]; courseVideos?: any[]; courseRequirements?: any[]; price?: number; duration?: number; certificate?: string; programmingCodes?: any[]; assets?: any[]; quizzes?: any[] }, instructorId?: string) => {
+    const { courseName, description, category, chapters, courseVideos, courseRequirements, price, duration, certificate, programmingCodes, assets, quizzes } = payload;
 
     // Validate required fields
     if (!courseName) {
@@ -13,6 +13,21 @@ const addCourseValidation = (payload: { courseName?: string; description?: strin
         return {
             isValid: false,
             message: "Description is required"
+        };
+    }
+
+    if (!category) {
+        return {
+            isValid: false,
+            message: "Category is required"
+        };
+    }
+
+    const validCategories = ['Web Development', 'Data Science', 'Design', 'Business'];
+    if (!validCategories.includes(category)) {
+        return {
+            isValid: false,
+            message: "Invalid category. Must be one of: Web Development, Data Science, Design, Business"
         };
     }
 

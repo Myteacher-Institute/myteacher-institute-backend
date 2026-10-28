@@ -8,3 +8,5 @@ export { default as Notification } from './notification.model';
 export { default as CompanyMoney } from './company-money.model';
 export { CourseCreationJob } from './course-creation.model';
 export { default as MentorshipRequest } from './mentorship-request.model';
+export { Community } from './community.model';
+export { BlogPost } from './blog.model';

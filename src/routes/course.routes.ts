@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { isInstructor } from "../middleware/is-instructor";
 import { ProtectMiddleWare } from "../middleware/protect-route";
-import { handleAddCourse, handleCourseEdit, handleFetchCourseById, handleFetchCoursePreview, handleFetchCoursesByAppliedUser, handleFetchAllCourses, handleBrowseCourses, handleFetchCoursesByInstructor, handleDeleteCourse, handleRetryDeletion, handleDeleteOnly, handleAddRating, handleInstructorStatistics, handleInstructorReviews } from "../controllers/course.controller";
+import { handleAddCourse, handleCourseEdit, handleFetchCourseById, handleFetchCoursePreview, handleFetchCoursesByAppliedUser, handleFetchAllCourses, handleBrowseCourses, handleFetchCoursesByInstructor, handleDeleteCourse, handleRetryDeletion, handleDeleteOnly, handleAddRating, handleInstructorStatistics, handleInstructorReviews, handleFetchPopularCourses, handleFetchCoursesByCategory } from "../controllers/course.controller";
 import { handleCreateCourseCreation, handleCreateCourseEdit, handleFetchActiveCourseCreations, upload as courseCreationUpload } from "../controllers/course-creation.controller";
 import rateLimit from "express-rate-limit";
 
@@ -63,6 +63,12 @@ courseRouter.post("/:courseId/rating", ProtectMiddleWare, courseOperationLimiter
 
 // Fetch all courses (public route - excluding courseVideos and certificate) - must come before /:courseId
 courseRouter.get("/all", handleFetchAllCourses);
+
+// Fetch popular courses (public route) - limited fields for home page
+courseRouter.get("/popular", handleFetchPopularCourses);
+
+// Fetch courses by category (public route)
+courseRouter.get("/category/:category", handleFetchCoursesByCategory);
 
 // Browse courses (public route) - lean projection, preview-video courses only,
 // with pagination, search and category filter for the All-Courses page.

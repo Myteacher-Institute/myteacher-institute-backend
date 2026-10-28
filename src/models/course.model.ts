@@ -10,6 +10,11 @@ export const courseSchema = new mongoose.Schema<ICourse>({
         type: String,
         required: true
     },
+    category: {
+        type: String,
+        enum: ['Web Development', 'Data Science', 'Design', 'Business'],
+        required: true
+    },
     chapters: [
         {
             title: String,

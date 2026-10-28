@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { Course } from "../models/course.model";
 import { Instructor } from "../models/instructor.model";
 import { CourseAnalytics } from "../models/course-analytics.model";
-import { AddCourseReqBody, AddCourseResT, FetchCoursesByUserResT, FetchAllCoursesResT, BrowseCoursesResT, EditCourseReqBody, EditCourseResT, FetchCourseByIdResT, CoursePreviewResT } from "../types";
+import { AddCourseReqBody, AddCourseResT, FetchCoursesByUserResT, FetchAllCoursesResT, BrowseCoursesResT, EditCourseReqBody, EditCourseResT, FetchCourseByIdResT, CoursePreviewResT, FetchPopularCoursesResT } from "../types";
 import { addCourseValidation } from "../services";
 import { google } from "googleapis";
 import bcrypt from "bcryptjs";
@@ -48,7 +48,7 @@ const handleAddCourse = async (req: Request<{}, {}, AddCourseReqBody>, res: Resp
             });
         }
 
-        const { courseName, description, chapters, courseVideos, courseRequirements, price, duration, certificate, programmingCodes, assets, quizzes } = req.body;
+        const { courseName, description, category, chapters, courseVideos, courseRequirements, price, duration, certificate, programmingCodes, assets, quizzes } = req.body;
 
         // Get instructor details from the database
         const instructor = await Instructor.findById(instructorId);
@@ -69,6 +69,7 @@ const handleAddCourse = async (req: Request<{}, {}, AddCourseReqBody>, res: Resp
         const newCourse = await Course.create({
             courseName,
             description,
+            category,
             chapters: chaptersToStore,
             courseVideos: courseVideos !== undefined ? courseVideos : flattened.videos,
             programmingCodes: programmingCodes !== undefined ? programmingCodes : flattened.programmingCodes,
@@ -163,7 +164,7 @@ const handleCourseEdit = async (req: Request<{ courseId: string }, {}, EditCours
         }
 
         // Update course with provided fields
-        const { courseName, description, chapters, courseVideos, courseRequirements, price, duration, certificate, programmingCodes, assets, quizzes } = req.body;
+        const { courseName, description, category, chapters, courseVideos, courseRequirements, price, duration, certificate, programmingCodes, assets, quizzes } = req.body;
 
         // Chapters are the source of truth; derive the flat aggregate arrays
         // from them so external-service deletions and legacy consumers keep
@@ -327,6 +328,7 @@ const handleCourseEdit = async (req: Request<{ courseId: string }, {}, EditCours
         if (chapters !== undefined) course.chapters = chapters;
         if (courseName !== undefined) course.courseName = courseName;
         if (description !== undefined) course.description = description;
+        if (category !== undefined) course.category = category;
         if (courseRequirements !== undefined) course.courseRequirements = courseRequirements;
         if (price !== undefined) course.price = price;
         if (duration !== undefined) course.duration = duration;
@@ -1576,6 +1578,193 @@ const handleDeleteOnly = async (req: Request<{ courseId: string }, {}, EditCours
     }
 };
 
+const handleFetchPopularCourses = async (req: Request, res: Response<FetchPopularCoursesResT>) => {
+    try {
+        const { cacheGet, cacheSet } = await import('../config/redis');
+        const cacheKey = 'courses:popular';
+
+        // Try to get from cache first
+        const cachedCourses = await cacheGet(cacheKey);
+        if (cachedCourses) {
+            console.log('📦 Serving popular courses from cache');
+            return res.status(200).json({
+                status: "success",
+                message: "Popular courses fetched successfully",
+                courses: cachedCourses
+            });
+        }
+
+        // Fetch courses with only the specified fields
+        // Sort by averageRating (descending) and number of appliedUsers (descending)
+        const courses = await Course.aggregate([
+            {
+                $match: {
+                    'courseVideos.isPreview': true,
+                    category: { $exists: true, $ne: null }
+                }
+            },
+            {
+                $addFields: {
+                    studentCount: { $size: { $ifNull: ['$appliedUsers', []] } },
+                    firstPreviewVideo: {
+                        $arrayElemAt: [
+                            {
+                                $filter: {
+                                    input: { $ifNull: ['$courseVideos', []] },
+                                    as: 'v',
+                                    cond: '$$v.isPreview',
+                                },
+                            },
+                            0,
+                        ],
+                    },
+                },
+            },
+            {
+                $sort: {
+                    averageRating: -1,
+                    studentCount: -1,
+                },
+            },
+            {
+                $limit: 8,
+            },
+            {
+                $project: {
+                    courseName: 1,
+                    description: 1,
+                    ratings: 1,
+                    averageRating: 1,
+                    price: 1,
+                    duration: 1,
+                    previewVideo: {
+                        videoUrl: '$firstPreviewVideo.videoUrl',
+                        videoTitle: '$firstPreviewVideo.videoTitle',
+                        videoDescription: '$firstPreviewVideo.videoDescription',
+                        videoDuration: '$firstPreviewVideo.videoDuration',
+                    },
+                },
+            },
+        ]);
+
+        // Cache the result for 5 minutes (300 seconds)
+        await cacheSet(cacheKey, courses, 300);
+
+        return res.status(200).json({
+            status: "success",
+            message: "Popular courses fetched successfully",
+            courses
+        });
+
+    } catch (error) {
+        console.error('Fetch popular courses error --->', (error as Error)?.message ?? error);
+        res.status(500).json({
+            status: "failed",
+            message: "Internal server error"
+        });
+    }
+};
+
+const handleFetchCoursesByCategory = async (req: Request<{ category: string }>, res: Response<FetchPopularCoursesResT>) => {
+    try {
+        const { category } = req.params;
+        const page = Math.max(parseInt(String(req.query.page), 10) || 1, 1);
+        const limit = Math.min(Math.max(parseInt(String(req.query.limit), 10) || 12, 1), 24);
+
+        const validCategories = ['Web Development', 'Data Science', 'Design', 'Business'];
+        if (!validCategories.includes(category)) {
+            return res.status(400).json({
+                status: "failed",
+                message: "Invalid category"
+            });
+        }
+
+        const { cacheGet, cacheSet } = await import('../config/redis');
+        const cacheKey = `courses:category:${category}:page:${page}`;
+
+        // Try to get from cache first
+        const cachedCourses = await cacheGet(cacheKey);
+        if (cachedCourses) {
+            console.log('📦 Serving category courses from cache');
+            return res.status(200).json({
+                status: "success",
+                message: "Courses fetched successfully",
+                courses: cachedCourses
+            });
+        }
+
+        // Fetch courses by category with only the specified fields
+        const courses = await Course.aggregate([
+            {
+                $match: {
+                    category: category,
+                    'courseVideos.isPreview': true
+                }
+            },
+            {
+                $addFields: {
+                    firstPreviewVideo: {
+                        $arrayElemAt: [
+                            {
+                                $filter: {
+                                    input: { $ifNull: ['$courseVideos', []] },
+                                    as: 'v',
+                                    cond: '$$v.isPreview',
+                                },
+                            },
+                            0,
+                        ],
+                    },
+                },
+            },
+            {
+                $sort: {
+                    averageRating: -1,
+                    createdAt: -1,
+                },
+            },
+            {
+                $skip: (page - 1) * limit,
+            },
+            {
+                $limit: limit,
+            },
+            {
+                $project: {
+                    courseName: 1,
+                    description: 1,
+                    ratings: 1,
+                    averageRating: 1,
+                    price: 1,
+                    duration: 1,
+                    previewVideo: {
+                        videoUrl: '$firstPreviewVideo.videoUrl',
+                        videoTitle: '$firstPreviewVideo.videoTitle',
+                        videoDescription: '$firstPreviewVideo.videoDescription',
+                        videoDuration: '$firstPreviewVideo.videoDuration',
+                    },
+                },
+            },
+        ]);
+
+        // Cache the result for 5 minutes (300 seconds)
+        await cacheSet(cacheKey, courses, 300);
+
+        return res.status(200).json({
+            status: "success",
+            message: "Courses fetched successfully",
+            courses
+        });
+
+    } catch (error) {
+        console.error('Fetch courses by category error --->', (error as Error)?.message ?? error);
+        res.status(500).json({
+            status: "failed",
+            message: "Internal server error"
+        });
+    }
+};
+
 export {
     handleAddCourse,
     handleCourseEdit,
@@ -1590,5 +1779,7 @@ export {
     handleDeleteOnly,
     handleAddRating,
     handleInstructorStatistics,
-    handleInstructorReviews
+    handleInstructorReviews,
+    handleFetchPopularCourses,
+    handleFetchCoursesByCategory
 };

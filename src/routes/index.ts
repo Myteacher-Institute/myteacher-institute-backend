@@ -16,3 +16,5 @@ export { default as pusherRouter } from './pusher.routes';
 export { default as announcementRouter } from './announcement.routes';
 export { default as aiTokenRouter } from './ai-token.routes';
 export { default as instructorReportRouter } from './instructor-report.routes';
+export { default as communityRouter } from './community.routes';
+export { default as blogRouter } from './blog.routes';
