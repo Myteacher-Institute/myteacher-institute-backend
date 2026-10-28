@@ -43,7 +43,7 @@ export const handleCreateBlogPost = async (req: Request, res: Response) => {
             authorName = admin.name;
             authorEmail = admin.email;
             authorRole = 'admin';
-            authorProfilePicture = admin.profilePicture;
+            authorProfilePicture = undefined;
         } else if (instructor) {
             authorName = instructor.name;
             authorEmail = instructor.email;
@@ -65,7 +65,7 @@ export const handleCreateBlogPost = async (req: Request, res: Response) => {
             author: userId,
             authorName,
             authorEmail,
-            authorRole,
+            authorRole: authorRole as 'admin' | 'instructor',
             authorProfilePicture,
             tags: tags || [],
             readTime,
