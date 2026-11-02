@@ -55,7 +55,7 @@ export const handleVerifyPassword = async (
 
   if (cookie) {
     res.cookie(cookie.name, cookie.value, {
-      maxAge: 30 * 24 * 60 * 60 * 1000,
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days // 30 days
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
@@ -73,7 +73,7 @@ export const handleVerifyOtp = async (
 
   if (body.cookie) {
     res.cookie(body.cookie.name, body.cookie.value, {
-      maxAge: 30 * 24 * 60 * 60 * 1000,
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
@@ -97,7 +97,7 @@ export const handleCompleteOnboarding = async (
 
   if (body.cookie) {
     res.cookie(body.cookie.name, body.cookie.value, {
-      maxAge: 30 * 24 * 60 * 60 * 1000,
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
@@ -131,8 +131,8 @@ export const handleResetPasswordWithCode = async (
   return res.status(status).json(body);
 };
 
-export const handleGoogleCallback = async (req: Request<any, any, any, any>, res: Response) => {
-  await googleCallback(req, res);
+export const handleGoogleCallback = async (req: Request<any, any, any, any>, res: Response, userType: string = 'student') => {
+  await googleCallback(req, res, userType);
 };
 
 export const handleRegisterUser = async (

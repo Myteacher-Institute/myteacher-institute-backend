@@ -64,8 +64,16 @@ authRoute.post("/logout", generalLimiter, handleLogout);
 
 // Google OAuth routes
 const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
+const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || 'http://localhost:4000';
 
-authRoute.get("/google", passport.authenticate("google", { session: false, scope: ["profile", "email"] }));
+authRoute.get("/google", (req: Request, res: Response) => {
+  const userType = req.query.user_type as string || 'student';
+  return passport.authenticate("google", {
+    session: false,
+    scope: ["profile", "email"],
+    state: userType // Use state parameter to pass user_type
+  })(req, res);
+});
 authRoute.get(
   "/google/callback",
   passport.authenticate("google", {
@@ -74,7 +82,8 @@ authRoute.get(
   }),
   async (req: Request, res: Response) => {
     try {
-      await handleGoogleCallback(req, res);
+      const userType = (req.query.state as string) || 'student';
+      await handleGoogleCallback(req, res, userType);
     } catch (error) {
       logger.error(`Error on @googleCallback route: ${(error as Error)?.message ?? error}`);
       res.redirect(`${FRONTEND_BASE_URL}/get-started?error=google-auth-failed`);

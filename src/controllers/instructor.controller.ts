@@ -91,14 +91,29 @@ const handleApplyAsInstructor = async (req: Request<ApplyInstructorReqBody>, res
             phone,
             specialization,
             profilePicture,
-            isVerified: false
+            isVerified: false,
         });
 
-        await sendInstructorApplicationEmail({ name, email, phone });
+        // Send OTP for email verification instead of admin application email
+        const emailResult = await sendVerificationEmail(newInstructor._id.toString(), email, 'new-account', 'instructor');
+
+        if (emailResult === 'rate-limited') {
+            return res.status(429).json({
+                status: "failed",
+                message: "Too many attempts. Please wait 15 minutes before trying again."
+            });
+        }
+
+        if (emailResult === 'error') {
+            return res.status(500).json({
+                status: "failed",
+                message: "Failed to send verification code. Please try again."
+            });
+        }
 
         return res.status(201).json({
             status: "success",
-            message: "Instructor application submitted successfully",
+            message: "Verification code sent to your email",
             instructor: {
                 name: newInstructor.name,
                 email: newInstructor.email,
@@ -156,7 +171,7 @@ const handleVerifyInstructorOtp = async (req: Request<VerifyInstructorOtpReqBody
 
         if (result.cookie) {
             res.cookie(result.cookie.name, result.cookie.value, {
-                maxAge: 30 * 24 * 60 * 60 * 1000,
+                maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',

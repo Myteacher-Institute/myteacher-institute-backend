@@ -12,7 +12,7 @@ export const courseSchema = new mongoose.Schema<ICourse>({
     },
     category: {
         type: String,
-        enum: ['Web Development', 'Data Science', 'Design', 'Business'],
+        enum: ['Web Development', 'Data Science', 'Design', 'Business', 'DevOps', 'Programming', 'Game Development', 'Animation', 'Cyber Security', 'Other'],
         required: true
     },
     chapters: [

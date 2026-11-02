@@ -53,7 +53,7 @@ export const generateJWT = (args: generateJWT): string | 'error' => {
       logger.error('JWT_REFRESH_TOKEN_SECRET is not defined');
       return 'error';
     }
-    const token = jwt.sign({ userId, sessionId }, secret, { expiresIn: '7d' });
+    const token = jwt.sign({ userId, sessionId }, secret, { expiresIn: '30d' });
     return token;
   } catch (error) {
     logger.error(`generateJWTCookie error -> ${(error as Error)?.message ?? error}`);
@@ -142,7 +142,7 @@ export const generateJWTCookie = (args: generateJWTCookieT): string | "error" =>
             logger.error('JWT_REFRESH_TOKEN_SECRET is not defined');
             return "error";
         }
-        const token = jwt.sign({ userId }, secret, { expiresIn: '7d' });
+        const token = jwt.sign({ userId }, secret, { expiresIn: '30d' });
         return token;
 
 
