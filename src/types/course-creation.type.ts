@@ -50,6 +50,7 @@ export interface CourseCreationResultAsset {
 export interface CourseCreationPayload {
     courseName: string;
     description: string;
+    category: 'Web Development' | 'Data Science' | 'Design' | 'Business' | 'DevOps' | 'Programming' | 'Game Development' | 'Animation' | 'Cyber Security' | 'Other';
     chapters: any[];
     courseVideos: any[];
     programmingCodes: any[];

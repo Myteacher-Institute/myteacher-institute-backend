@@ -146,6 +146,7 @@ const buildCourseFromPayload = (job: ICourseCreationJob, instructor: any) => {
     return {
         courseName: payload.courseName,
         description: payload.description,
+        category: payload.category,
         chapters,
         courseVideos: flattened.videos,
         programmingCodes: flattened.programmingCodes,
@@ -613,6 +614,7 @@ const completeCourseEdit = async (job: ICourseCreationJob): Promise<void> => {
     // Apply the resolved fields to the existing course document.
     if (payload.courseName) course.courseName = payload.courseName;
     if (payload.description !== undefined) course.description = payload.description;
+    if (payload.category) course.category = payload.category;
     if (payload.price !== undefined) course.price = payload.price;
     if (payload.duration !== undefined) course.duration = payload.duration;
     if (payload.certificate !== undefined) course.certificate = payload.certificate;

@@ -51,6 +51,7 @@ const validatePayload = (payload: CourseCreationPayload): string | null => {
     if (!payload || typeof payload !== 'object') return "Invalid course metadata";
     if (!payload.courseName?.trim()) return "Course name is required";
     if (!payload.description?.trim()) return "Description is required";
+    if (!payload.category?.trim()) return "Category is required";
     if (payload.price === undefined || payload.price === null || isNaN(Number(payload.price))) return "Price is required";
     if (payload.duration === undefined || payload.duration === null || isNaN(Number(payload.duration))) return "Duration is required";
     if (!payload.certificate) return "Certificate is required";

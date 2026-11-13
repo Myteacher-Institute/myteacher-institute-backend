@@ -1596,13 +1596,8 @@ const handleFetchPopularCourses = async (req: Request, res: Response<FetchPopula
 
         // Fetch courses with only the specified fields
         // Sort by averageRating (descending) and number of appliedUsers (descending)
+        // Removed strict requirements for preview videos and category to show more courses
         const courses = await Course.aggregate([
-            {
-                $match: {
-                    'courseVideos.isPreview': true,
-                    category: { $exists: true, $ne: null }
-                }
-            },
             {
                 $addFields: {
                     studentCount: { $size: { $ifNull: ['$appliedUsers', []] } },
@@ -1671,7 +1666,7 @@ const handleFetchCoursesByCategory = async (req: Request<{ category: string }>, 
         const page = Math.max(parseInt(String(req.query.page), 10) || 1, 1);
         const limit = Math.min(Math.max(parseInt(String(req.query.limit), 10) || 12, 1), 24);
 
-        const validCategories = ['Web Development', 'Data Science', 'Design', 'Business'];
+        const validCategories = ['Web Development', 'Data Science', 'Design', 'Business', 'DevOps', 'Programming', 'Game Development', 'Animation', 'Cyber Security', 'Other'];
         if (!validCategories.includes(category)) {
             return res.status(400).json({
                 status: "failed",
@@ -1694,11 +1689,11 @@ const handleFetchCoursesByCategory = async (req: Request<{ category: string }>, 
         }
 
         // Fetch courses by category with only the specified fields
+        // Removed strict requirement for preview videos to show more courses
         const courses = await Course.aggregate([
             {
                 $match: {
-                    category: category,
-                    'courseVideos.isPreview': true
+                    category: category
                 }
             },
             {

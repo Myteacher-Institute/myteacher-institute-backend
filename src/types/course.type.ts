@@ -37,7 +37,7 @@ export interface CourseChapter {
 export interface ICourse extends mongoose.Document {
     courseName: string;
     description: string;
-    category: 'Web Development' | 'Data Science' | 'Design' | 'Business';
+    category: 'Web Development' | 'Data Science' | 'Design' | 'Business' | 'DevOps' | 'Programming' | 'Game Development' | 'Animation' | 'Cyber Security' | 'Other';
     chapters: CourseChapter[];
     courseVideos: {
         videoUrl: string;
@@ -100,7 +100,7 @@ export interface ICourse extends mongoose.Document {
 export type AddCourseReqBody = {
     courseName: string;
     description: string;
-    category: 'Web Development' | 'Data Science' | 'Design' | 'Business';
+    category: 'Web Development' | 'Data Science' | 'Design' | 'Business' | 'DevOps' | 'Programming' | 'Game Development' | 'Animation' | 'Cyber Security' | 'Other';
     chapters?: CourseChapter[];
     courseVideos: Array<{
         videoUrl: string;
@@ -187,7 +187,7 @@ export type BrowseCoursesResT = {
 export type EditCourseReqBody = {
     courseName?: string;
     description?: string;
-    category?: 'Web Development' | 'Data Science' | 'Design' | 'Business';
+    category?: 'Web Development' | 'Data Science' | 'Design' | 'Business' | 'DevOps' | 'Programming' | 'Game Development' | 'Animation' | 'Cyber Security' | 'Other';
     chapters?: CourseChapter[];
     courseVideos?: Array<{
         videoUrl: string;
