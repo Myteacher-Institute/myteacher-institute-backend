@@ -49,6 +49,7 @@ const resolveAffiliate = async (affiliateId: string, buyerUserId: string, course
  * Create a payment link for course purchase
  */
 export const handleCreatePayment = async (req: Request<{}, {}, CreatePaymentReqBody>, res: Response<CreatePaymentResT>) => {
+    console.log('[PAYMENT-CONTROLLER] handleCreatePayment called');
     try {
         const userId = req.userId;
         const { courseId, amount, currency = 'NGN', paymentMethod = 'flutterwave', redirectUrl, affiliateId } = req.body;

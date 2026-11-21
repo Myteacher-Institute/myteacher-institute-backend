@@ -38,9 +38,15 @@ const manualPaymentRateLimiter = (req: Request, res: Response, next: NextFunctio
 
 // Create payment link for course purchase (requires authentication)
 paymentRoute.post('/create', (req, res, next) => {
-    console.log('[PAYMENT-ROUTE] POST /create called');
+    console.log('[PAYMENT-ROUTE] POST /create called, passing to ProtectMiddleWare');
     next();
-}, ProtectMiddleWare, manualPaymentRateLimiter, handleCreatePayment);
+}, ProtectMiddleWare, (req, res, next) => {
+    console.log('[PAYMENT-ROUTE] ProtectMiddleWare passed, passing to rate limiter');
+    next();
+}, manualPaymentRateLimiter, (req, res, next) => {
+    console.log('[PAYMENT-ROUTE] Rate limiter passed, passing to controller');
+    next();
+}, handleCreatePayment);
 
 // Verify payment after Flutterwave callback (requires authentication)
 paymentRoute.get('/verify', ProtectMiddleWare, handleVerifyPayment);
