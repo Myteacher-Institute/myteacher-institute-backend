@@ -5,8 +5,6 @@ import rateLimit from 'express-rate-limit';
 
 const paymentRoute: Router = Router();
 
-console.log('[DEBUG] Payment routes module loaded');
-
 // Rate limiter for payment operations
 const paymentLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -16,6 +14,9 @@ const paymentLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    skipFailedRequests: true,
+    // Disable trust proxy validation since we're behind nginx
+    validate: { trustProxy: false }
 });
 
 // Create payment link for course purchase (requires authentication)
