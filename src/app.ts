@@ -36,9 +36,6 @@ const apiRouters: { path: string; router: Router }[] = [
 const createApp = (): Express => {
     const app = express();
 
-    // Trust proxy headers from nginx/reverse proxy (required for rate limiter to work)
-    app.set('trust proxy', true);
-
     const allowedOrigins = process.env.ALLOWED_ORIGINS
         ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
         : ['http://localhost:3000'];

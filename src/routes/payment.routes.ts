@@ -1,26 +1,37 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { ProtectMiddleWare } from '../middleware/protect-route';
 import { handleCreatePayment, handleVerifyPayment, handleGetPaymentStatus, handleGetUserTransactions, handleGetTransactionByRef } from '../controllers/payment.controller';
-import rateLimit from 'express-rate-limit';
 
 const paymentRoute: Router = Router();
 
-// Rate limiter for payment operations
-const paymentLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 20, // Limit each IP to 20 payment operations per 15 minutes
-    message: {
-        error: "Too many payment operations, please try again after 15 minutes"
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-    skipFailedRequests: true,
-    // Disable trust proxy validation since we're behind nginx
-    validate: { trustProxy: false }
-});
+// Manual in-memory rate limiter for payment operations
+const paymentRateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+const RATE_LIMIT_MAX = 20; // 20 requests per window
+
+const manualPaymentRateLimiter = (req: Request, res: Response, next: NextFunction) => {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    const record = paymentRateLimitMap.get(ip);
+
+    if (!record || now > record.resetTime) {
+        paymentRateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+        return next();
+    }
+
+    if (record.count >= RATE_LIMIT_MAX) {
+        return res.status(429).json({
+            status: 'failed',
+            message: 'Too many payment operations, please try again after 15 minutes'
+        });
+    }
+
+    record.count++;
+    return next();
+};
 
 // Create payment link for course purchase (requires authentication)
-paymentRoute.post('/create', ProtectMiddleWare, paymentLimiter, handleCreatePayment);
+paymentRoute.post('/create', ProtectMiddleWare, manualPaymentRateLimiter, handleCreatePayment);
 
 // Verify payment after Flutterwave callback (requires authentication)
 paymentRoute.get('/verify', ProtectMiddleWare, handleVerifyPayment);
