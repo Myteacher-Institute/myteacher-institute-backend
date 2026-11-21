@@ -58,8 +58,9 @@ const createApp = (): Express => {
     app.use(morgan('tiny'));
 
     // Fast radix-tree router for all API routes (falls back to Express below).
-    const fastApi = buildFastApiRouter(apiRouters);
-    app.use('/api', fastApi);
+    // Disabled temporarily due to route parsing issues in production
+    // const fastApi = buildFastApiRouter(apiRouters);
+    // app.use('/api', fastApi);
 
     // Express routers — authoritative fallback + source of truth for what's mounted.
     for (const { path, router } of apiRouters) {
