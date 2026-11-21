@@ -15,6 +15,7 @@ export const ProtectMiddleWare = async (
   res: Response<ProtectMiddleWareErrorT>,
   next: NextFunction
 ) => {
+  console.log('[PROTECT-MIDDLEWARE] Request received for:', req.path);
   try {
     const accessTokenSecret = config['JWT_ACCESS_TOKEN_SECRET'] as string;
     const refreshTokenSecret = config['JWT_REFRESH_TOKEN_SECRET'] as string;
