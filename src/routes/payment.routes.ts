@@ -4,22 +4,27 @@ import { handleCreatePayment, handleVerifyPayment, handleGetPaymentStatus, handl
 
 const paymentRoute: Router = Router();
 
+console.log('[PAYMENT-ROUTES] Payment routes module loaded');
+
 // Manual in-memory rate limiter for payment operations
 const paymentRateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
 const RATE_LIMIT_MAX = 20; // 20 requests per window
 
 const manualPaymentRateLimiter = (req: Request, res: Response, next: NextFunction) => {
+    console.log('[PAYMENT-LIMITER] Request received for /api/payment/create');
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
     const now = Date.now();
     const record = paymentRateLimitMap.get(ip);
 
     if (!record || now > record.resetTime) {
         paymentRateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+        console.log('[PAYMENT-LIMITER] Request allowed - new window');
         return next();
     }
 
     if (record.count >= RATE_LIMIT_MAX) {
+        console.log('[PAYMENT-LIMITER] Request rate limited');
         return res.status(429).json({
             status: 'failed',
             message: 'Too many payment operations, please try again after 15 minutes'
@@ -27,6 +32,7 @@ const manualPaymentRateLimiter = (req: Request, res: Response, next: NextFunctio
     }
 
     record.count++;
+    console.log('[PAYMENT-LIMITER] Request allowed - count:', record.count);
     return next();
 };
 
