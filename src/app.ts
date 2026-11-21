@@ -64,6 +64,7 @@ const createApp = (): Express => {
 
     // Express routers — authoritative fallback + source of truth for what's mounted.
     for (const { path, router } of apiRouters) {
+        console.log(`[DEBUG] Mounting Express router at /api${path}`);
         app.use(`/api${path}`, router);
     }
 

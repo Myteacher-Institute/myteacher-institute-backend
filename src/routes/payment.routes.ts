@@ -5,6 +5,8 @@ import rateLimit from 'express-rate-limit';
 
 const paymentRoute: Router = Router();
 
+console.log('[DEBUG] Payment routes module loaded');
+
 // Rate limiter for payment operations
 const paymentLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
